@@ -1533,9 +1533,10 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
-  const float kMaxSnp=0.95;
+  const float kMaxSnp=0.97;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
+  const int kMaxSkip = 5;
   fLengthIn=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -1688,6 +1689,8 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   double xyz[3];
   int status=0;
   const double *par = param.GetParameter();
+  int n_skip=0;
+  int n_skip_mirror=0;
   for (int index=index1-1; index>=0; index--){   // dont propagate to vertex , will be done later ...
       double resol=0;
       float crossLength = 0;
@@ -1701,38 +1704,89 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       int checkloop = fLoop[index]-fLoop[index+1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
       if(checkloop==0) status = 1;  
       else status = 0;
-
-      if (status==0){   // if not possible to propagate to next radius - assume looper - change direction
-          crossLength = param.PropagateToMirrorX(geom.fBz, fDirection[index], geom.fLayerResolRPhi[layer],geom.fLayerResolZ[layer]);  ////Using direction from MC, not realistic reconstruction
-          if (crossLength>0)
-          {
-            fStatusMaskIn[index]|=kTrackRotate;
-            fStatusMaskIn[index]|=kTrackPropagate;
-          }
-          else
-          {
-            ::Error("fastParticle::reconstructParticleFull:", "PropagateToMirrorX failed");
-            break;
-          }
-      }
-      else{
-          if (radius>0) {
-            status = param.Rotate(alpha);
-          }
-          if (status) {
-            fStatusMaskIn[index]|=kTrackRotate;
-          }else{
-              ::Error("fastParticle::reconstructParticleFull:", "Rotation failed");
+      if(n_skip_mirror==0)
+      {
+        if (status==0){   // if not possible to propagate to next radius - assume looper - change direction
+            crossLength = param.PropagateToMirrorX(geom.fBz, fDirection[index], geom.fLayerResolRPhi[layer],geom.fLayerResolZ[layer]);  ////Using direction from MC, not realistic reconstruction
+            if (crossLength>0)
+            {
+              fStatusMaskIn[index]|=kTrackRotate;
+              fStatusMaskIn[index]|=kTrackPropagate;
+              if(n_skip>0)
+              {
+                fParamIn[index]=param;
+                fChi2[index]=fChi2[index+1];
+                fStatusMaskIn[index]=fStatusMaskIn[index+1];
+                fLengthIn++;
+                n_skip_mirror=n_skip;
+                n_skip=0;
+                continue;
+              }
+            }
+            else
+            {
+              ::Error("fastParticle::reconstructParticleFull:", "PropagateToMirrorX failed");
               break;
-          }
-          status = param.PropagateTo(radius,geom.fBz,1);
-          if (status) {
-            fStatusMaskIn[index]|=kTrackPropagate;
-          }else{
-            ::Error("fastParticle::reconstructParticleFull:", "Propagation failed");
-            break;
-          }
+            }
+        }
+        else{
+            if (radius>0) {
+              status = param.Rotate(alpha);
+            }
+            if (status) {
+              fStatusMaskIn[index]|=kTrackRotate;
+            }else{
+                if(n_skip<kMaxSkip)
+                {
+                  param=fParamIn[index+1];
+                  fParamIn[index]=param;
+                  fChi2[index]=fChi2[index+1];
+                  fStatusMaskIn[index]=fStatusMaskIn[index+1];
+                  fLengthIn++;
+                  n_skip++;
+                  continue;
+                }
+                else
+                {
+                  ::Error("fastParticle::reconstructParticleFull:", "Rotation failed");
+                  break;
+                }
+            }
+            status = param.PropagateTo(radius,geom.fBz,1);
+            if (status) {
+              fStatusMaskIn[index]|=kTrackPropagate;
+            }else{
+                if(n_skip<kMaxSkip)
+                {
+                  param=fParamIn[index+1];
+                  fParamIn[index]=param;
+                  fChi2[index]=fChi2[index+1];
+                  fStatusMaskIn[index]=fStatusMaskIn[index+1];
+                  fLengthIn++;
+                  n_skip++;
+                  continue;
+                }
+                else
+                {
+                  ::Error("fastParticle::reconstructParticleFull:", "Propagation failed");
+                  break;
+                }
+            }
+        }
       }
+      else
+      {
+        n_skip_mirror--;
+        if(n_skip_mirror>0)
+        {
+          fParamIn[index]=param;
+          fChi2[index]=fChi2[index+1];
+          fStatusMaskIn[index]=fStatusMaskIn[index+1];
+          fLengthIn++;
+          continue;
+        }
+      }
+      if(n_skip>0) n_skip=0;
       float xrho  =geom.fLayerRho[layer];
       float xx0  =geom.fLayerX0[layer];
       float deltaY = gRandom->Gaus(0,geom.fLayerResolRPhi[layer]);
