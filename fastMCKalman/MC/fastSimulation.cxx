@@ -158,6 +158,48 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   return dArch; 
 
 }
+
+/// this is pseudocode to be used in propagate to mirror to account or the material along the arc
+/// hee we have the same logical problem as in correct for mean material - factor sqrt(2) in angular spread
+/// Here we assume the parameters defining MS are not changing along trajectory
+/// \param crossLength
+/// \param xx0
+/// \param beta2
+/// \param p2
+/// \param nSteps
+/// \return
+ void AliExternalTrackParam4D::UpdateIntegralCovar(float crossLength, float xx0, Double_t mass, float nSteps, int mcSwitch){
+  bool isMC = (mcSwitch&0x1)>0;
+  float xOverX0=crossLength*xx0/nSteps;
+  Double_t p2=GetP()*GetP();
+  Double_t beta2=p2/(p2+mass*mass);
+  Double_t theta2=0.0136*0.0136/(beta2*p2)*TMath::Abs(xOverX0); // smearing angle per unit step
+  float dL=crossLength/nSteps;
+  //
+  for (int i=0; i<nSteps;i++ ){
+     fC[0]+=(2*theta2*dL*dL) ;    // + add contribution frpm angle phi from before
+     fC[2]+=(2*theta2*dL*dL);    // + add contribution frpm angle phi from before
+     fC[5]+=(theta2);          //
+     fC[9]+=(theta2);          //
+     //
+     fC[3]+=theta2*dL;         // +
+     fC[7]+=theta2*dL;         // +
+  }
+
+  if(isMC)
+  {
+    for (int i=0; i<nSteps;i++ ){
+      double phi = TMath::ASin(fP[2]);
+      double lambda=TMath::ATan(fP[3]);
+      float p2New=TMath::Sin(gRandom->Gaus(phi,sqrt(theta2)));
+      float p3New=TMath::Tan(gRandom->Gaus(lambda,sqrt(theta2)));
+      Double_t cP4MS = sqrt((1+(p3New*p3New))/(1+(fP[3])*(fP[3]))); ////keep total momentum constant and modify q/pt accordingly (this factor is cos(lambda)/cos(lambda_new))
+      fP[2]=p2New;
+      fP[3]=p3New;
+      fP[4]*=cP4MS;
+    }
+  }
+}
 ///  Clone of the original method removing one protection - here we disable  TMath::Abs(cosT)>kAlmost1 check (lAlmost1 was very restrictive)
 ///  // This method has 3 modes of behaviour
 ///  // 1) xyz[3] array is provided but alpSect pointer is 0: calculate the position of track intersection
@@ -503,11 +545,6 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
   //Calculating the energy loss corrections************************
   Double_t cP4=1.;
   if ((xTimesRho != 0.) && (beta2 < 1.)) {
-    Double_t dE=Eout-Ein;
-    if ( (1.+ dE/p2*(dE + 2*Ein)) < 0. ) {
-      return kFALSE;
-    }
-    cP4 = 1./TMath::Sqrt(1.+ dE/p2*(dE + 2*Ein));  //A precise formula by Ruben !  - //TODO -this formula is only first taylor approximation
     cP4 = pOld/pOut;                               /// TODO we use momentum loss not need to use "Ruben E loss approximation"
     //if (TMath::Abs(fP4*cP4)>100.) return kFALSE; //Do not track below 10 MeV/c -disable controlled by the BG cut
     // Approximate energy loss fluctuation (M.Ivanov)
@@ -530,8 +567,6 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
     double lambda=TMath::ATan(fP[3]);
     float p2New=TMath::Sin(gRandom->Gaus(phi,sqrt(theta2)));
     float p3New=TMath::Tan(gRandom->Gaus(lambda,sqrt(theta2)));
-    //Float_t p2New=fP[2]+gRandom->Gaus(0,TMath::Sqrt(cC22));
-    //Float_t dp3New=gRandom->Gaus(0,TMath::Sqrt(cC33));
     if (TMath::Abs(p2New)>1.) {
       if (!isMC) return kFALSE;
     }
@@ -544,7 +579,6 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
     fP[3]=p3New;
     fP[4]*=cP4MS;
     fP[4]*=(1.+p4RelSmear);
-    //fP[4]+=gRandom->Gaus(0,TMath::Sqrt(cC44)); //- TODO transform scattering in p2 and P3 to modification of qPt - can not be independent
   }
   fC22 += cC22;
   fC33 += cC33;
@@ -1091,9 +1125,9 @@ void fastGeometry::setLayer(int iLayer, float radius,  float X0,float rho, float
 
 void fastParticle::refitParticle()
 {
-  fParamRefit = fParamIn;
-  fParamRefit.resize(fParamIn.size());
-  fStatusMaskRefit.resize(fParamIn.size());
+  size_t new_size = TMath::Max(fParamIn.size(),fParamOut.size());
+  fParamRefit.resize(new_size);
+  fStatusMaskRefit.resize(new_size);
   for(size_t i=0; i<fParamRefit.size();i++) fStatusMaskRefit[i]=0;
   for(size_t i=0; i<fParamRefit.size();i++)
   {
@@ -1102,16 +1136,14 @@ void fastParticle::refitParticle()
 
     std::uint16_t flagsIn=fStatusMaskIn[i];
 
-    if(((flagsIn & kTrackEnter) && (flagsIn & kTrackRotate) && (flagsIn & kTrackPropagate) && (flagsIn & kTrackChi2) && (flagsIn & kTrackUpdate) && (flagsIn & kTrackCorrectForMaterial))
-       ||((flagsIn & kTrackEnter) && (flagsIn & kTrackRotate) && (flagsIn & kTrackPropagate) && (flagsIn & kTrackChi2) && (flagsIn & kTrackSkipUpdate ) ))
+    if(flagsIn & kTrackIsOK)
     {
       statusIn=kTRUE;
     }
 
     std::uint16_t flagsOut=fStatusMaskOut[i]; 
 
-    if(((flagsOut & kTrackEnter) && (flagsOut & kTrackRotate) && (flagsOut & kTrackPropagate) && (flagsOut & kTrackChi2) && (flagsOut & kTrackUpdate) && (flagsOut & kTrackCorrectForMaterial))
-       ||((flagsOut & kTrackEnter) && (flagsOut & kTrackRotate) && (flagsOut & kTrackPropagate) && (flagsOut & kTrackChi2) && (flagsOut & kTrackSkipUpdate ) ))
+    if(flagsOut & kTrackIsOK)
     {
       statusOut=kTRUE;
     }
@@ -1120,19 +1152,20 @@ void fastParticle::refitParticle()
     {
       fParamRefit[i]=fParamIn[i];
       fStatusMaskRefit[i]|=kTrackUsedIn;
-      fStatusMaskRefit[i]|=kTrackisOK;
+      fStatusMaskRefit[i]|=kTrackIsOK;
     }
     else if(!statusIn && statusOut)
     {
       fParamRefit[i]=fParamOut[i];
       fStatusMaskRefit[i]|=kTrackUsedOut;
-      fStatusMaskRefit[i]|=kTrackisOK;
+      fStatusMaskRefit[i]|=kTrackIsOK;
     }
     else if (statusIn && statusOut)
     {
+      fParamRefit[i]=fParamIn[i];
       AliExternalTrackParam4D::UpdateTrack(fParamRefit[i],fParamOut[i]);
       fStatusMaskRefit[i]|=kTrackRefitted;
-      fStatusMaskRefit[i]|=kTrackisOK;
+      fStatusMaskRefit[i]|=kTrackIsOK;
     }
     int checkpoint=0;
 
@@ -1650,7 +1683,7 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
         break;
       }
       fLengthIn++;
-      fStatusMaskIn[index]|=kTrackisOK;
+      fStatusMaskIn[index]|=kTrackIsOK;
   }
   return 1;
 }
@@ -1851,6 +1884,10 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
             ::Error("fastParticle::reconstructParticleFull:", "PropagateToMirrorX failed");
             break;
           }      
+          ////Update covariance
+          for (Int_t ic=0;ic<5; ic++) {
+          status*= param.CorrectForMeanMaterial(crossLength * geom.fLayerX0[layer]/5., crossLength * geom.fLayerRho[layer]/5., mass, 0.01);
+          }
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,index);
           float dx_min = 9999;
@@ -1870,7 +1907,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           index=new_index;
           fParamIn[index]=param;
           fStatusMaskIn[index]|=kTrackPropagatetoMirrorX;
-          fStatusMaskIn[index]|=kTrackisOK;
+          fStatusMaskIn[index]|=kTrackIsOK;
           checkloop=0;
           continue;
       }
@@ -1998,7 +2035,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
         }
       }
       fLengthIn++;
-      fStatusMaskIn[index]|=kTrackisOK;
+      fStatusMaskIn[index]|=kTrackIsOK;
   }
   return 1;
   
@@ -2198,6 +2235,10 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
             ::Error("fastParticle::reconstructParticleFullOut:", "PropagateToMirrorX failed");
             break;
           }      
+          ////Update Covariance
+          for (Int_t ic=0;ic<5; ic++) {
+            status*= param.CorrectForMeanMaterial(crossLength * geom.fLayerX0[layer]/5., -crossLength * geom.fLayerRho[layer]/5., mass, 0.01);
+          }
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,int(indexlast-index));
           float dx_min = 9999;
@@ -2217,7 +2258,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           index=new_index;
           fParamOut[index]=param;
           fStatusMaskOut[index]|=kTrackPropagatetoMirrorX;
-          fStatusMaskOut[index]|=kTrackisOK;
+          fStatusMaskOut[index]|=kTrackIsOK;
           checkloop=0;
           continue;
       }
@@ -2339,12 +2380,13 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
         if (status) {
           fStatusMaskOut[index]|=kTrackCorrectForMaterial;
         }else{
+          param.CorrectForMeanMaterial(crossLength * xx0/5., -crossLength * xrho/5., mass, 0.01);
           ::Error("fastParticle::reconstructParticleFullOut:", "Correct for material failed");
           break;
         }
       }
       fLengthOut++;
-      fStatusMaskOut[index]|=kTrackisOK;
+      fStatusMaskOut[index]|=kTrackIsOK;
   }
   return 1;
   

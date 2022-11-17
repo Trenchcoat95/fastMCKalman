@@ -61,7 +61,7 @@ void testLooperSmooth(){
 
 void testPulls(std::string sv="", std::string Id="In", std::string extra_condition="&&Iteration$==0") {
   TF1 *mygauss = new TF1("mygauss", "gaus");
-  int isOK=fastParticle::kTrackisOK;
+  int isOK=fastParticle::kTrackIsOK;
     for (int iPar = 0; iPar <= 4; iPar++) {
       treeFast->Draw(Form("(part%s.fParam%s[].fP[%d]-part%s.fParamMC[].fP[%d])/sqrt(part%s.fParam%s[].fC[%d])>>his(100,-6,6)",sv.c_str(),Id.c_str(), iPar, sv.c_str(), iPar, sv.c_str(),Id.c_str(), AliExternalTrackParam::GetIndex(iPar, iPar)),
                     Form("(part%s.fStatusMask%s[].fData&%d)==%d&&abs(part%s.fParam%s[].fP[2])<0.7%s",sv.c_str(),Id.c_str(),isOK,isOK,sv.c_str(),Id.c_str(),extra_condition.c_str()), "");
