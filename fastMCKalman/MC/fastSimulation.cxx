@@ -76,6 +76,48 @@ Bool_t AliExternalTrackParam4D::PropagateTo(Double_t xk, Double_t b, Int_t timeD
   return status;
 }
 
+
+Double_t AliExternalTrackParam4D::GetdzMirror(Double_t y_loc, Double_t sinp, Double_t tanlambda, Double_t qpt, Double_t x_loc, Double_t alpha, Double_t b, Double_t dir)
+{
+  Double_t xold = x_loc*cos(alpha) - y_loc*sin(alpha);
+  Double_t yold = x_loc*sin(alpha) + y_loc*cos(alpha);
+
+  Double_t cs= cosf(alpha); Double_t sn=sinf(alpha); // RS use float versions: factor 2 in CPU speed
+  Double_t crv= qpt*b*kB2C;    // Curvature 
+
+  Double_t xc, yc, rc, x0, y0;
+  rc = 1/crv;  xc = x_loc-sinp*rc;
+  Double_t dummy = 1-(x_loc-xc)*(x_loc-xc)*crv*crv;
+  if (dummy<0) dummy = 0;
+  yc  =  y_loc+TMath::Sqrt(dummy)/crv;
+  x0 = xc*cs - yc*sn; y0 = xc*sn + yc*cs;
+
+  float alphaC    = TMath::ATan2(y0,x0);
+
+  float dAlpha    = alpha-alphaC;
+  if (dAlpha>TMath::Pi()) dAlpha-=TMath::TwoPi();
+  if (dAlpha<-TMath::Pi()) dAlpha+=TMath::TwoPi();
+  Double_t alpha_new = alphaC-dAlpha;
+
+  Double_t xnew = x_loc*cos(alpha_new) - y_loc*sin(alpha_new);
+  Double_t ynew = x_loc*sin(alpha_new) + y_loc*cos(alpha_new);
+
+  double cross = sqrt((xnew-xold)*(xnew-xold)+(ynew-yold)*(ynew-yold));
+  Double_t sinphic = 0.5*cross / rc;
+
+  if (abs(sinphic)>1) 
+  {
+    return 0;
+  }
+  Double_t dPhic = 2*asin(sinphic);
+  Double_t darchxy = dir*abs(dPhic*rc);
+
+  Double_t dz = darchxy*tanlambda;
+
+  return dz;
+
+}
+
 Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Double_t  sy, Double_t sz)
 {
    //----------------------------------------------------------------
@@ -88,7 +130,7 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   Double_t &X = fX;
 
   Double_t 
-  &fC00=fC[0],   &fC11=fC[2], 
+  &fC00=fC[0],   &fC11=fC[2],  &fC22=fC[5],   &fC33=fC[9],   &fC44=fC[14],   
   &fC20=fC[3],   &fC21=fC[4],  
   &fC30=fC[6],   &fC31=fC[7],    
   &fC40=fC[10],  &fC41=fC[11];
@@ -98,7 +140,13 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   
   Double_t &fA=fAlpha;
 
-  
+  Double_t dz = GetdzMirror(fP[0],fP[2],fP[3],fP[4],fX,fAlpha,b,dir);
+  Double_t ddz_dp0 = (GetdzMirror(fP[0]+sqrt(fC00),fP[2],fP[3],fP[4],fX,fAlpha,b,dir)-GetdzMirror(fP[0]-sqrt(fC00),fP[2],fP[3],fP[4],fX,fAlpha,b,dir))/(2*sqrt(fC00));
+  Double_t ddz_dp2 = (GetdzMirror(fP[0],fP[2]+sqrt(fC22),fP[3],fP[4],fX,fAlpha,b,dir)-GetdzMirror(fP[0],fP[2]-sqrt(fC22),fP[3],fP[4],fX,fAlpha,b,dir))/(2*sqrt(fC22));
+  Double_t ddz_dp3 = (GetdzMirror(fP[0],fP[2],fP[3]+sqrt(fC33),fP[4],fX,fAlpha,b,dir)-GetdzMirror(fP[0],fP[2],fP[3]-sqrt(fC33),fP[4],fX,fAlpha,b,dir))/(2*sqrt(fC33));
+  Double_t ddz_dp4 = (GetdzMirror(fP[0],fP[2],fP[3],fP[4]+sqrt(fC44),fX,fAlpha,b,dir)-GetdzMirror(fP[0],fP[2],fP[3],fP[4]-sqrt(fC44),fX,fAlpha,b,dir))/(2*sqrt(fC44));
+  Double_t ddz2 =  ddz_dp0*ddz_dp0*fC00 + ddz_dp2*ddz_dp2*fC22 + ddz_dp3*ddz_dp3*fC33 + ddz_dp4*ddz_dp4*fC44;
+
   Double_t xc, yc, rc, x0, y0;
   Double_t cs= cosf(fAlpha); Double_t sn=sinf(fAlpha); // RS use float versions: factor 2 in CPU speed
   Double_t crv= GetC(b);    // Curvature 
@@ -131,9 +179,9 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   }
   Double_t dPhic = 2*asin(sinphic);
   Double_t darchxy = dir*abs(dPhic*rc);
-  fP1 += darchxy*fP[3];
-  fC00+=(sy*darchxy)*(sy*darchxy);
-  fC11+=(sz*darchxy)*(sz*darchxy);
+
+  fP1  += darchxy*fP[3];
+  fC11 += ddz2;
 
 
   //Flip parameters 2/4
@@ -179,11 +227,12 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   for (int i=0; i<nSteps;i++ ){
      fC[0]+=(2*theta2*dL*dL) ;    // + add contribution frpm angle phi from before
      fC[2]+=(2*theta2*dL*dL);    // + add contribution frpm angle phi from before
-     fC[5]+=(theta2);          //
-     fC[9]+=(theta2);          //
-     //
-     fC[3]+=theta2*dL;         // +
-     fC[7]+=theta2*dL;         // +
+     fC[5]+=(theta2)*(1-fP[2])*(1+fP[2])*(1. + fP[3]*fP[3]);          //
+     fC[9]+=(theta2)*(1. + fP[3]*fP[3])*(1. + fP[3]*fP[3]);          //
+     fC[14]+=theta2*fP[3]*fP[4]*fP[3]*fP[4];
+     
+     fC[3]*=(abs(theta2*dL)+abs(fC[3]))/(abs(fC[3]));         // +
+     fC[7]+=(abs(theta2*dL)+abs(fC[7]))/(abs(fC[7]));        // +
   }
 
   if(isMC)
@@ -1315,37 +1364,43 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
     float xx0     = geom.fLayerX0[indexR];
     float tanPhi2 = par[2]*par[2];
     tanPhi2/=(1-tanPhi2);
-    if (crossLength==0) crossLength=TMath::Sqrt(1.+tanPhi2+par[3]*par[3]);               /// geometrical path assuming crossing cylinder
-    //status = param.CorrectForMeanMaterialT4(crossLength*xx0,-crossLength*xrho,mass);
-    double pOld=param.GetP();
-    status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,1+0x2*fAddMSsmearing);
-    if (1){
-       if (fgStreamer) {
-         float dPdx=param.dPdxEulerStep(pOld,mass,  -crossLength*xrho,0.005);
-         //float dEdx=param.dPdxEulerStep(pOld,mass,  crossLength*xx0,-crossLength*xrho);
-         (*fgStreamer) << "dEdxCorr" <<
-                       "crossLength=" << crossLength <<
-                       "mass="   << mass<<
-                       "xx0=" << xx0 <<
-                       "pOld=" << pOld <<
-                       "status=" << status <<
-                       "param.=" << &param <<
-                       "dPdx="<<dPdx<<
-                       "\n";
-       }
+    if (crossLength==0) 
+    {
+        crossLength=TMath::Sqrt(1.+tanPhi2+par[3]*par[3]);               /// geometrical path assuming crossing cylinder
+        //status = param.CorrectForMeanMaterialT4(crossLength*xx0,-crossLength*xrho,mass);
+        double pOld=param.GetP();
+        status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,1+0x2*fAddMSsmearing);
+        if (1){
+          if (fgStreamer) {
+            float dPdx=param.dPdxEulerStep(pOld,mass,  -crossLength*xrho,0.005);
+            //float dEdx=param.dPdxEulerStep(pOld,mass,  crossLength*xx0,-crossLength*xrho);
+            (*fgStreamer) << "dEdxCorr" <<
+                          "crossLength=" << crossLength <<
+                          "mass="   << mass<<
+                          "xx0=" << xx0 <<
+                          "pOld=" << pOld <<
+                          "status=" << status <<
+                          "param.=" << &param <<
+                          "dPdx="<<dPdx<<
+                          "\n";
+          }
+        }
+        if ((status == true) &&param.GetP()>pOld){
+          ::Error("simulateParticle", "Invalid momentum loss %f ->%f - check again",pOld,param.GetP());
+          status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,fAddMSsmearing);
+        }
+        if (status==false){
+          status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,fAddMSsmearing);
+        }
+        if (gRandom->Rndm()<fracUnitTest) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
+        if (status) {
+            fStatusMaskMC[nPoint]|=kTrackCorrectForMaterial;
+          }else{
+            break;
+        }
     }
-    if ((status == true) &&param.GetP()>pOld){
-      ::Error("simulateParticle", "Invalid momentum loss %f ->%f - check again",pOld,param.GetP());
-      status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,fAddMSsmearing);
-    }
-    if (status==false){
-      status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,fAddMSsmearing);
-    }
-    if (gRandom->Rndm()<fracUnitTest) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
-    if (status) {
-        fStatusMaskMC[nPoint]|=kTrackCorrectForMaterial;
-      }else{
-        break;
+    else{
+      param.UpdateIntegralCovar(crossLength,xx0,mass,100,1);
     }
     fParamMC.resize(nPoint+1);
     fParamMC[nPoint]=param;
@@ -1885,9 +1940,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
             break;
           }      
           ////Update covariance
-          for (Int_t ic=0;ic<5; ic++) {
-          status*= param.CorrectForMeanMaterial(crossLength * geom.fLayerX0[layer]/5., crossLength * geom.fLayerRho[layer]/5., mass, 0.01);
-          }
+          param.UpdateIntegralCovar(crossLength,geom.fLayerX0[layer],mass,100);
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,index);
           float dx_min = 9999;
@@ -2236,9 +2289,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
             break;
           }      
           ////Update Covariance
-          for (Int_t ic=0;ic<5; ic++) {
-            status*= param.CorrectForMeanMaterial(crossLength * geom.fLayerX0[layer]/5., -crossLength * geom.fLayerRho[layer]/5., mass, 0.01);
-          }
+          param.UpdateIntegralCovar(crossLength,geom.fLayerX0[layer],mass,100);
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,int(indexlast-index));
           float dx_min = 9999;

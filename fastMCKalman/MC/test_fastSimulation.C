@@ -19,6 +19,7 @@
 #include "TTreeStream.h"
 #include "fastTracker.h"
 #include "fastSimulation.h"
+#include "TCanvas.h"
 #include "TStyle.h"
 
 
@@ -64,7 +65,25 @@ void testPulls(std::string sv="", std::string Id="In", std::string extra_conditi
   int isOK=fastParticle::kTrackIsOK;
     for (int iPar = 0; iPar <= 4; iPar++) {
       treeFast->Draw(Form("(part%s.fParam%s[].fP[%d]-part%s.fParamMC[].fP[%d])/sqrt(part%s.fParam%s[].fC[%d])>>his(100,-6,6)",sv.c_str(),Id.c_str(), iPar, sv.c_str(), iPar, sv.c_str(),Id.c_str(), AliExternalTrackParam::GetIndex(iPar, iPar)),
-                    Form("(part%s.fStatusMask%s[].fData&%d)==%d&&abs(part%s.fParam%s[].fP[2])<0.7%s",sv.c_str(),Id.c_str(),isOK,isOK,sv.c_str(),Id.c_str(),extra_condition.c_str()), "");
+                    Form("(part%s.fStatusMask%s[]&%d)==%d&&abs(part%s.fParam%s[].fP[2])<0.7%s",sv.c_str(),Id.c_str(),isOK,isOK,sv.c_str(),Id.c_str(),extra_condition.c_str()), "");
+      treeFast->GetHistogram()->Fit("mygauss", "q");
+      bool isOK = abs(1 - mygauss->GetParameter(2)) < 5 * mygauss->GetParError(2);
+      float rms=treeFast->GetHistogram()->GetRMS();
+      if (isOK) {
+        ::Info(Form("testFastTracker part%s reco %s pull test P%d ",sv.c_str(),Id.c_str(),iPar), "pullAnalytical - OK - %2.2f\t%2.2f", mygauss->GetParameter(2),rms);
+      } else {
+        ::Error(Form("testFastTracker part%s reco %s pull test P%d",sv.c_str(),Id.c_str(), iPar), "pullAnalytical- FAILED- %2.2f\t%2.2f", mygauss->GetParameter(2),rms);
+      }
+    }
+}
+
+void testPullsMirror(std::string sv="Full", std::string Id="In", std::string extra_condition="") {
+  TF1 *mygauss = new TF1("mygauss", "gaus");
+  int isOK=fastParticle::kTrackIsOK | fastParticle::kTrackPropagatetoMirrorX;
+    for (int iPar = 0; iPar <= 4; iPar++) {
+
+      treeFast->Draw(Form("(part%s.fParam%s[].fP[%d]-part%s.fParamMC[].fP[%d])/sqrt(part%s.fParam%s[].fC[%d])>>his(100,-6,6)",sv.c_str(),Id.c_str(), iPar, sv.c_str(), iPar, sv.c_str(),Id.c_str(), AliExternalTrackParam::GetIndex(iPar, iPar)),
+                    Form("(part%s.fStatusMask%s[]&%d)==%d &&abs(part%s.fParam%s[].fP[2])>0.95 %s",sv.c_str(),Id.c_str(),isOK,isOK,sv.c_str(),Id.c_str(),extra_condition.c_str()), "");
       treeFast->GetHistogram()->Fit("mygauss", "q");
       bool isOK = abs(1 - mygauss->GetParameter(2)) < 5 * mygauss->GetParError(2);
       float rms=treeFast->GetHistogram()->GetRMS();
@@ -128,22 +147,22 @@ void drawTrackStatus(int counter, std::string Id = "In", std::string Error = "0x
   treeFast->SetMarkerColor(1);   /// all MC
   treeFast->Draw("gyMC:gxMC","","",1,counter);
   treeFast->SetMarkerColor(4);   /// all reco points
-  treeFast->Draw("gyInF:gxInF",Form("partFull.fStatusMask%s.fData>0",Id.c_str()),"same",1,counter);
+  treeFast->Draw("gyInF:gxInF",Form("partFull.fStatusMask%s>0",Id.c_str()),"same",1,counter);
   treeFast->SetMarkerColor(2);   /// first MC point
   treeFast->Draw("gyMC:gxMC","Iteration$==0","same",1,counter);
   treeFast->SetMarkerColor(3);   /// trigger problem
-  treeFast->Draw("gyInF:gxInF",Form("partFull.fStatusMask%s.fData==%s",Id.c_str(),Error.c_str()),"same",1,counter);
+  treeFast->Draw("gyMC:gxMC",Form("partFull.fStatusMask%s==%s",Id.c_str(),Error.c_str()),"same",1,counter);
 }
 
 void drawTrackStatus3D(int counter, std::string Id = "In", std::string Error = "0x1"){
   treeFast->SetMarkerColor(1);   /// all MC
   treeFast->Draw("gyMC:gxMC:gzMC","","",1,counter);
   treeFast->SetMarkerColor(4);   /// all reco points
-  treeFast->Draw("gyInF:gxInF:gzInF",Form("partFull.fStatusMask.fData%s>0",Id.c_str()),"same",1,counter);
+  treeFast->Draw("gyInF:gxInF:gzInF",Form("partFull.fStatusMask%s>0",Id.c_str()),"same",1,counter);
   treeFast->SetMarkerColor(2);   /// first MC point
   treeFast->Draw("gyMC:gxMC:gzMC","Iteration$==0","same",1,counter);
   treeFast->SetMarkerColor(3);   /// trigger problem
-  treeFast->Draw("gyInF:gxInF:gzInF",Form("partFull.fStatusMask%s.fData==%s",Id.c_str(),Error.c_str()),"same",1,counter);
+  treeFast->Draw("gyMC:gxMC:gzMC",Form("partFull.fStatusMask%s==%s",Id.c_str(),Error.c_str()),"same",1,counter);
 }
 
 void SetList(std::string Id = "In", std::string Error = "0x1"){
@@ -152,10 +171,48 @@ void SetList(std::string Id = "In", std::string Error = "0x1"){
   treeFast->SetAlias("gxInF",Form("cos(partFull.fParam%s[].fAlpha)*partFull.fParam%s[].fX",Id.c_str(),Id.c_str()));
   treeFast->SetAlias("gzInF",Form("partFull.fParam%s[].fP[1]",Id.c_str()));
 
-  treeFast->Draw(">>ProblemRot",Form("Sum$(partFull.fStatusMask%s.fData==%s)",Id.c_str(),Error.c_str()),"entrylist");
+  treeFast->Draw(">>ProblemRot",Form("Sum$(partFull.fStatusMask%s==(%s))",Id.c_str(),Error.c_str()),"entrylist");
   TEntryList* problemList0x1 =(TEntryList*)gDirectory->Get("ProblemRot");
   treeFast->SetEntryList(problemList0x1);
   int counter=0;
   treeFast->SetMarkerSize(1.5);
   gStyle->SetPalette(55);
+}
+
+void testGetz(int num = 10000)
+{
+  TH1D * res= new TH1D("res","res",100,-6,6);
+  for(int i=0;i<num;i++)
+  {
+    double p0MC =  0;
+    double p2MC =  -1+2*gRandom->Rndm();
+    double p3MC =  -1+2*gRandom->Rndm();
+    double p4MC =  -1+2*gRandom->Rndm();
+
+    double fC00 = 0.01;
+    double fC22 = 0.01;
+    double fC33 = 0.01;
+    double fC44 = 0.01;
+
+    double p0 =  p0MC+ gRandom->Gaus(0,sqrt(fC00));
+    double p2 =  p2MC+ gRandom->Gaus(0,sqrt(fC22));
+    double p3 =  p3MC+ gRandom->Gaus(0,sqrt(fC33));
+    double p4 =  p4MC+ gRandom->Gaus(0,sqrt(fC44));
+
+    Double_t dzMC = AliExternalTrackParam4D::GetdzMirror(p0MC,p2MC,p3MC,p4MC,100,2,5,1);
+    Double_t dz = AliExternalTrackParam4D::GetdzMirror(p0,p2,p3,p4,100,2,5,1);
+    Double_t ddz_dp0 = (AliExternalTrackParam4D::GetdzMirror(p0+sqrt(fC00),p2,p3,p4,100,2,5,1)-AliExternalTrackParam4D::GetdzMirror(p0-sqrt(fC00),p2,p3,p4,100,2,5,1))/(2*sqrt(fC00));
+    Double_t ddz_dp2 = (AliExternalTrackParam4D::GetdzMirror(p0,p2+sqrt(fC22),p3,p4,100,2,5,1)-AliExternalTrackParam4D::GetdzMirror(p0,p2-sqrt(fC22),p3,p4,100,2,5,1))/(2*sqrt(fC22));
+    Double_t ddz_dp3 = (AliExternalTrackParam4D::GetdzMirror(p0,p2,p3+sqrt(fC33),p4,100,2,5,1)-AliExternalTrackParam4D::GetdzMirror(p0,p2,p3-sqrt(fC33),p4,100,2,5,1))/(2*sqrt(fC33));
+    Double_t ddz_dp4 = (AliExternalTrackParam4D::GetdzMirror(p0,p2,p3,p4+sqrt(fC44),100,2,5,1)-AliExternalTrackParam4D::GetdzMirror(p0,p2,p3,p4-sqrt(fC44),100,2,5,1))/(2*sqrt(fC44));
+    Double_t ddz2 =  ddz_dp0*ddz_dp0*fC00 + ddz_dp2*ddz_dp2*fC22 + ddz_dp3*ddz_dp3*fC33 + ddz_dp4*ddz_dp4*fC44;
+    res->Fill((dzMC-dz)/sqrt(ddz2));
+  }
+
+  TCanvas *c1 = new TCanvas("c1","Candle Decay",1000,800);
+  res->Fit("gaus");
+  gStyle->SetOptFit(1);
+  res->Draw();
+
+
 }

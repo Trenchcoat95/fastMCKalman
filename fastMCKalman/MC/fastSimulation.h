@@ -34,6 +34,7 @@ public:
   //
   Bool_t PropagateTo(Double_t xk, Double_t b, Int_t timeDir);
   Double_t PropagateToMirrorX(Double_t b, Float_t dir, Double_t  sy, Double_t sz);
+  static  Double_t GetdzMirror(Double_t y_loc, Double_t sinp, Double_t tanlambda,Double_t qpt, Double_t x_loc, Double_t alpha, Double_t b, Double_t dir);
   void UpdateIntegralCovar(float crossLength, float xx0, Double_t mass, float nSteps, int mcSwitch=0);
   Bool_t GetXYZatR(Double_t xr,Double_t bz, Double_t *xyz=0, Double_t* alpSect=0) const;
   //
