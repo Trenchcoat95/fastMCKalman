@@ -1670,10 +1670,10 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
-  const float kMaxSnp=0.95;
+  const float kMaxSnp=0.98;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=20;
+  const int   kMaxSkipped=10;
   fLengthIn=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -1720,7 +1720,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   float semiplane = -1;
   float sphi1 = 0.1;
   Int_t step=index1/3;
-  if (step>10) step=10;
+  if (step>50) step=50;
 
   while(semiplane<0 || sphi1>kMaxSnp)
   {
@@ -1830,6 +1830,8 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   int status=0;
   const double *par = param.GetParameter();
   int checkloop=0;
+  int Mirrored=0;
+  param = fParamMC[index1-1];  ////Cheating seeding for now
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1-1; index>=0; index--){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
@@ -1842,11 +1844,12 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       double alpha=TMath::ATan2(xyz[1],xyz[0]);
       double radius = TMath::Sqrt(xyz[0]*xyz[0]+xyz[1]*xyz[1]);
       fStatusMaskIn[index]|=kTrackEnter;
+      if(Mirrored>0) Mirrored--;
 
       if(checkloop==0) 
       {
         if(fUseMCInfo) checkloop = fLoop[index]-fLoop[index+1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
-        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
+        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp && Mirrored==0)? 1:0;
       }
 
       
@@ -1881,6 +1884,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           fStatusMaskIn[index]|=kTrackisOK;
           fNPointsIn[index]=fLengthIn;
           checkloop=0;
+          Mirrored=5;
           continue;
       }
       else{
@@ -2021,11 +2025,11 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 /// \param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint){
-  const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
-  const float kMaxSnp=0.95;
+  const Float_t chi2Cut=1000/(geom.fLayerResolZ[0]);
+  const float kMaxSnp=0.99;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=20;
+  const int   kMaxSkipped=50;
   fLengthOut=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -2180,10 +2184,12 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   int status=0;
   const double *par = param.GetParameter();
   int checkloop=0;
+  int Mirrored=0;
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1+1; index<=int(indexlast); index++){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
       Bool_t SkipUpdate = kFALSE;
+      if(Mirrored>0) Mirrored--;
       double resol=0;
       float crossLength = 0;
       Int_t layer = fLayerIndex[index];
@@ -2196,7 +2202,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
       if(checkloop==0 && index>1) 
       {
         if(fUseMCInfo) checkloop = fLoop[index]-fLoop[index-1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
-        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
+        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp && Mirrored==0)? 1:0;
       }
 
       
@@ -2231,6 +2237,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           fStatusMaskOut[index]|=kTrackisOK;
           fNPointsOut[index]=fLengthOut;
           checkloop=0;
+          Mirrored=10;
           continue;
       }
       else{
