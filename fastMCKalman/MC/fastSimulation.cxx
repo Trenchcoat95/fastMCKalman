@@ -1677,10 +1677,10 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
-  const float kMaxSnp=0.95;
+  const float kMaxSnp=0.99;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=20;
+  const int   kMaxSkipped=50;
   fLengthIn=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -1839,6 +1839,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   int status=0;
   const double *par = param.GetParameter();
   int checkloop=0;
+  int mirrored =0;
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1-1; index>=0; index--){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
@@ -1855,7 +1856,16 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       if(checkloop==0) 
       {
         if(fUseMCInfo) checkloop = fLoop[index]-fLoop[index+1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
-        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
+        else if (index>kMaxSkipped)
+        {
+          if (mirrored==0)
+          {
+            checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
+            if(checkloop) mirrored = 20;
+          }
+        }
+        else if (TMath::Abs(param.GetParameter()[2])>0.999) break;
+        if(mirrored>0) mirrored--;
       }
 
       
@@ -1870,6 +1880,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           }      
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,index);
+          float dz_min = 9999;
           float dx_min = 9999;
           int  new_index = 0;
           for(int n=0; n<Skip; n++)
@@ -1879,7 +1890,14 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
             if(dx_m<dx_min)
             {
               dx_min=dx_m;
-              new_index=index-n;
+              if(fUseMCInfo) new_index=index-n;
+            }
+
+            float dz_m = TMath::Abs(fParamMC[index-n].GetParameter()[1]-param.GetParameter()[1]);
+            if(dz_m<dz_min)
+            {
+              dz_min=dz_m;
+              if(!fUseMCInfo) new_index=index-n;
             }
           }
           fLengthIn+=1+TMath::Abs(new_index-index);
@@ -2037,10 +2055,10 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
-  const float kMaxSnp=0.95;
+  const float kMaxSnp=0.99;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=20;
+  const int   kMaxSkipped=50;
   fLengthOut=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -2197,6 +2215,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   int status=0;
   const double *par = param.GetParameter();
   int checkloop=0;
+  int mirrored =0;
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1+1; index<=int(indexlast); index++){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
@@ -2213,7 +2232,16 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
       if(checkloop==0 && index>1) 
       {
         if(fUseMCInfo) checkloop = fLoop[index]-fLoop[index-1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
-        else checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp && index!=0 && (param.GetParameter()[2]/fParamOut[index-1].GetParameter()[2])>0)? 1:0;
+        else if (index<(int(indexlast)-kMaxSkipped))
+        {
+          if (mirrored==0)
+          {
+            checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
+            if(checkloop) mirrored = 20;
+          }
+        }
+        else if (TMath::Abs(param.GetParameter()[2])>0.999) break;
+        if(mirrored>0) mirrored--;
       }
 
       
@@ -2229,15 +2257,22 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,int(indexlast-index));
           float dx_min = 9999;
+          float dz_min = 9999;
           int  new_index = index;
           for(int n=0; n<Skip; n++)
           {
             Int_t layer_m = fLayerIndex[index+n];
-            float dx_m = TMath::Abs(fParamMC[index+n].GetX()-param.GetX());
+            float dx_m = TMath::Abs(fParamMC[index+n].GetParameter()[1]-param.GetX());
             if(dx_m<dx_min)
             {
               dx_min=dx_m;
-              new_index=index+n;
+              if(fUseMCInfo) new_index=index+n;
+            }
+            float dz_m = TMath::Abs(fParamMC[index+n].GetParameter()[1]-param.GetParameter()[1]);
+            if(dz_m<dz_min)
+            {
+              dz_min=dz_m;
+              if(!fUseMCInfo) new_index=index+n;
             }
           }
           fLengthOut+=1+TMath::Abs(new_index-index);
