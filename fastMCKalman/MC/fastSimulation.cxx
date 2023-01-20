@@ -1677,11 +1677,11 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 /// \param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
-  const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
+  const Float_t chi2Cut=10000/(geom.fLayerResolZ[0]);
   const float kMaxSnp=0.99;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=50;
+  const int   kMaxSkipped=100;
   fLengthIn=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -1730,7 +1730,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   float semiplane = -1;
   float sphi1 = 0.1;
   Int_t step=index1/3;
-  if (step>10) step=10;
+  //if (step>50) step=50;
 
   while(semiplane<0 || sphi1>kMaxSnp)
   {
@@ -1857,7 +1857,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       if(checkloop==0) 
       {
         if(fUseMCInfo) checkloop = fLoop[index]-fLoop[index+1];  /////// PropagateToMirror triggered for now using flag from MC information: not realistic reconstruction
-        else if (index>kMaxSkipped)
+        else if (index>kMaxSkipped/10)
         {
           if (mirrored==0)
           {
@@ -1872,7 +1872,9 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       
       if (checkloop!=0){   
           float dir = 0;
-          dir = - fDirection[index+1];
+          for (size_t d=1;d<TMath::Min((fDirection.size()-index),size_t(20));d++) dir+=fDirection[index+d];
+          //dir = - fDirection[index+1];
+          dir = dir>0? -1:1;
           crossLength = param.PropagateToMirrorX(geom.fBz, dir, geom.fLayerResolRPhi[layer],geom.fLayerResolZ[layer]);  ////Using direction from MC, not realistic reconstruction
           if (crossLength<0)
           {
@@ -1881,7 +1883,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           }      
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,index);
-          float dz_min = 9999;
+          float dxyz_min = 9999;
           float dx_min = 9999;
           int  new_index = 0;
           for(int n=0; n<Skip; n++)
@@ -1893,11 +1895,15 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
               dx_min=dx_m;
               if(fUseMCInfo) new_index=index-n;
             }
-
-            float dz_m = TMath::Abs(fParamMC[index-n].GetParameter()[1]-param.GetParameter()[1]);
-            if(dz_m<dz_min)
+            
+            Double_t xyzMC[3];
+            fParamMC[index-n].GetXYZ(xyzMC);
+            Double_t xyzparam[3];
+            param.GetXYZ(xyzparam);
+            float dxyz_m = sqrt((xyzMC[0]-xyzparam[0])*(xyzMC[0]-xyzparam[0])+(xyzMC[1]-xyzparam[1])*(xyzMC[1]-xyzparam[1])+(xyzMC[2]-xyzparam[2])*(xyzMC[2]-xyzparam[2]));
+            if(dxyz_m<dxyz_min)
             {
-              dz_min=dz_m;
+              dxyz_min=dxyz_m;
               if(!fUseMCInfo) new_index=index-n;
             }
           }
@@ -2107,7 +2113,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   float semiplane = -1;
   float sphi1 = 0.1;
   Int_t step=indexlast/3;
-  if (step>10) step=10;
+  if (step>20) step=20;
 
   while(semiplane<0 || sphi1>kMaxSnp)
   {
@@ -2249,7 +2255,10 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
       
       if (checkloop!=0){   // if not possible to propagate to next radius - assume looper - change direction
           float dir = 0;
-          dir = fDirection[index-1];
+          for (size_t d=1;d<TMath::Min(size_t(index),size_t(20));d++) dir+=fDirection[index-d];
+          //dir = fDirection[index-1];
+          dir = dir>0? 1:-1;
+
           crossLength = param.PropagateToMirrorX(geom.fBz, dir, geom.fLayerResolRPhi[layer],geom.fLayerResolZ[layer]);  ////Using direction from MC, not realistic reconstruction
           if (crossLength<0)
           {
@@ -2315,7 +2324,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
 
               if(!status )
               {
-                ::Error("fastParticle::reconstructParticleFull:", "Rotation failed");
+                ::Error("fastParticle::reconstructParticleFullOut:", "Rotation failed");
                 break;
               }
 
