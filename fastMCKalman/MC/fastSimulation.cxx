@@ -1866,9 +1866,8 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           }
         }
         else if (TMath::Abs(param.GetParameter()[2])>0.999) break;
-        if(mirrored>0) mirrored--;
       }
-
+      if(mirrored>0) mirrored--;
       
       if (checkloop!=0){   
           float dir = 0;
@@ -1944,10 +1943,17 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
                   }
               }
 
-              if(!status )
+              if(!status && mirrored!=0)
               {
                 ::Error("fastParticle::reconstructParticleFull:", "Rotation failed");
                 break;
+              }
+              else
+              {
+                param=fParamIn[index+1];
+                index++;
+                checkloop=2;
+                continue;
               }
 
               fLengthIn+=1+TMath::Abs(new_index-index);
@@ -2061,11 +2067,11 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 /// \param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint){
-  const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
+  const Float_t chi2Cut=10000/(geom.fLayerResolZ[0]);
   const float kMaxSnp=0.99;
   const float kMaxLoss=0.3;
   const float kCovarFactor=2.;
-  const int   kMaxSkipped=50;
+  const int   kMaxSkipped=100;
   fLengthOut=0;
   float_t mass=0;
   fPdgCodeRec   =pdgCode;
@@ -2322,10 +2328,17 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
                   }
               }
 
-              if(!status )
+              if(!status && mirrored>0)
               {
                 ::Error("fastParticle::reconstructParticleFullOut:", "Rotation failed");
                 break;
+              }
+              else
+              {
+                param=fParamIn[index-1];
+                index--;
+                checkloop=2;
+                continue;
               }
 
               fLengthOut+=1+TMath::Abs(new_index-index);
