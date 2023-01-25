@@ -1841,6 +1841,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
   const double *par = param.GetParameter();
   int checkloop=0;
   int mirrored =0;
+  Bool_t restarted = kFALSE;
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1-1; index>=0; index--){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
@@ -1862,7 +1863,6 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           if (mirrored==0)
           {
             checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
-            if(checkloop) mirrored = 20;
           }
         }
         else if (TMath::Abs(param.GetParameter()[2])>0.999) break;
@@ -1870,6 +1870,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
       if(mirrored>0) mirrored--;
       
       if (checkloop!=0){   
+          mirrored=20;
           float dir = 0;
           for (size_t d=1;d<TMath::Min((fDirection.size()-index),size_t(20));d++) dir+=fDirection[index+d];
           //dir = - fDirection[index+1];
@@ -1948,7 +1949,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
                 ::Error("fastParticle::reconstructParticleFull:", "Rotation failed");
                 break;
               }
-              else
+              else if(!status)
               {
                 param=fParamIn[index+1];
                 index++;
@@ -1977,12 +1978,31 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
             if (status) {
               fStatusMaskIn[index]|=kTrackPropagate;
               if(Propagate_Failed) Propagate_Failed=kFALSE;
-            }else if(!Propagate_Failed){
+            }else if(!Propagate_Failed && mirrored==0){
                 ///If propagation fails go back a step -> PropagateToMirrorX(); If this has already been tried in the previous step, propagation has failed.  
                 Propagate_Failed=kTRUE;         
                 param=fParamIn[index+1];
                 index++;
                 checkloop=2;
+                continue;
+            }
+            else if(!restarted)
+            {
+                restarted=kTRUE;
+                /////Try from the start
+                param = fParamIn[index1];
+                index = index1-1;
+                ((double*)param.GetParameter())[4]*=-1;
+                ((double*)param.GetParameter())[3]*=-1;
+                ((double*)param.GetParameter())[2]*=-1;
+                
+                ////Rotate Covariance accordingly RCR^T
+                ((double*)param.GetCovariance())[3]*=-1;
+                ((double*)param.GetCovariance())[4]*=-1;
+                ((double*)param.GetCovariance())[6]*=-1;
+                ((double*)param.GetCovariance())[7]*=-1;
+                ((double*)param.GetCovariance())[10]*=-1;
+                ((double*)param.GetCovariance())[11]*=-1;
                 continue;
             }
             else
@@ -2119,7 +2139,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   float semiplane = -1;
   float sphi1 = 0.1;
   Int_t step=indexlast/3;
-  if (step>20) step=20;
+  //if (step>20) step=20;
 
   while(semiplane<0 || sphi1>kMaxSnp)
   {
@@ -2230,6 +2250,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   const double *par = param.GetParameter();
   int checkloop=0;
   int mirrored =0;
+  Bool_t restarted = kFALSE;
   Bool_t Propagate_Failed = kFALSE;  ///Used to avoid to PropagateToMirrorX after Propagate failed twice consecutively
   for (int index=index1+1; index<=int(indexlast); index++){   // dont propagate to vertex , will be done later ...
       Bool_t Propagate_First = kFALSE;
@@ -2251,15 +2272,15 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           if (mirrored==0)
           {
             checkloop = (TMath::Abs(param.GetParameter()[2])>kMaxSnp)? 1:0;
-            if(checkloop) mirrored = 20;
           }
         }
         else if (TMath::Abs(param.GetParameter()[2])>0.999) break;
-        if(mirrored>0) mirrored--;
       }
+      if(mirrored>0) mirrored--;
 
       
       if (checkloop!=0){   // if not possible to propagate to next radius - assume looper - change direction
+          mirrored=20;
           float dir = 0;
           for (size_t d=1;d<TMath::Min(size_t(index),size_t(20));d++) dir+=fDirection[index-d];
           //dir = fDirection[index-1];
@@ -2274,7 +2295,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           ///Find closest point in X after PropagateToMirrorX    
           int Skip = TMath::Min(kMaxSkipped,int(indexlast-index));
           float dx_min = 9999;
-          float dz_min = 9999;
+          float dxyz_min = 9999;
           int  new_index = index;
           for(int n=0; n<Skip; n++)
           {
@@ -2285,10 +2306,14 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
               dx_min=dx_m;
               if(fUseMCInfo) new_index=index+n;
             }
-            float dz_m = TMath::Abs(fParamMC[index+n].GetParameter()[1]-param.GetParameter()[1]);
-            if(dz_m<dz_min)
+            Double_t xyzMC[3];
+            fParamMC[index+n].GetXYZ(xyzMC);
+            Double_t xyzparam[3];
+            param.GetXYZ(xyzparam);
+            float dxyz_m = sqrt((xyzMC[0]-xyzparam[0])*(xyzMC[0]-xyzparam[0])+(xyzMC[1]-xyzparam[1])*(xyzMC[1]-xyzparam[1])+(xyzMC[2]-xyzparam[2])*(xyzMC[2]-xyzparam[2]));
+            if(dxyz_m<dxyz_min)
             {
-              dz_min=dz_m;
+              dxyz_min=dxyz_m;
               if(!fUseMCInfo) new_index=index+n;
             }
           }
@@ -2328,14 +2353,14 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
                   }
               }
 
-              if(!status && mirrored>0)
+              if(!status && mirrored!=0)
               {
                 ::Error("fastParticle::reconstructParticleFullOut:", "Rotation failed");
                 break;
               }
-              else
+              else if(!status)
               {
-                param=fParamIn[index-1];
+                param=fParamOut[index-1];
                 index--;
                 checkloop=2;
                 continue;
@@ -2362,12 +2387,31 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
             if (status) {
               fStatusMaskOut[index]|=kTrackPropagate;
               if(Propagate_Failed) Propagate_Failed=kFALSE;
-            }else if(!Propagate_Failed){
+            }else if(!Propagate_Failed && mirrored==0){
                 ///If propagation fails go back a step -> PropagateToMirrorX(); If this has already been tried in the previous step, propagation has failed.  
                 Propagate_Failed=kTRUE;         
                 param=fParamOut[index-1];
                 index--;
                 checkloop=2;
+                continue;
+            }
+            else if(!restarted)
+            {
+                restarted=kTRUE;
+                /////Try from the start
+                param = fParamOut[index1];
+                index = index1+1;
+                ((double*)param.GetParameter())[4]*=-1;
+                ((double*)param.GetParameter())[3]*=-1;
+                ((double*)param.GetParameter())[2]*=-1;
+                
+                ////Rotate Covariance accordingly RCR^T
+                ((double*)param.GetCovariance())[3]*=-1;
+                ((double*)param.GetCovariance())[4]*=-1;
+                ((double*)param.GetCovariance())[6]*=-1;
+                ((double*)param.GetCovariance())[7]*=-1;
+                ((double*)param.GetCovariance())[10]*=-1;
+                ((double*)param.GetCovariance())[11]*=-1;
                 continue;
             }
             else
