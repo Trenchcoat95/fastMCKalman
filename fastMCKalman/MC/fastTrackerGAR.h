@@ -20,10 +20,10 @@ using namespace ROOT::Math;
 
 class fastTrackerGAR{
 public:
-  static AliExternalTrackParam* Helix_Fit(const std::vector<TVector3>  TPCClusters, float bz , int printlevel);
+  static AliExternalTrackParam* Helix_Fit(const std::vector<TVector3>  TPCClusters, float bz , Double_t sy, Double_t sz, int dir, int printlevel);
   static double capprox(double x1,double y1,double x2,double y2,double x3,double y3,double &xc, double &yc);
   static void ouchef(double *x, double *y, int np, double &xcirccent, double &ycirccent,double &rcirc, double &chisq, int &ifail);
-  //static void fastTrackerGAR::CalculateCovariance(const std::vector<XYZVector>  TPCClusters,TMatrixD &P,double curvature_init,double lambda_init,double phi_init,int printlevel,double sxy);
+  static void CalculateCovariance(Double_t (&c)[15],const std::vector<TVector3>  TPCClusters,AliExternalTrackParam * unsmear,float bz, double sy, double sz,int dir,int printlevel);
 
 };
 
@@ -362,7 +362,7 @@ void fastTrackerGAR::ouchef(double *x, double *y, int np, double &xcirccent, dou
 
 
 AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  TPCClusters,
-              float bz , int printlevel)
+              float bz , Double_t sy, Double_t sz, int dir, int printlevel)
 {
 
 
@@ -475,6 +475,7 @@ AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  T
 
   Double_t param[5];
   Double_t c[15] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  //CalculateCovariance(TPCClusters,c,curvature_init,lambda_init,phi_init,bz,sy,sz,dir,printlevel);
 
   param[0]=xyz0[1];              
   param[1]=xyz0[0];
@@ -490,14 +491,16 @@ AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  T
 }
 
 
-/*
-void fastTrackerGAR::CalculateCovariance(const std::vector<XYZVector>  TPCClusters,
-              TMatrixD &P,
-              double curvature_init,
-              double lambda_init,
-              double phi_init,
-              int printlevel,
-              double sxy
+
+void fastTrackerGAR::CalculateCovariance(
+              Double_t (&c)[15],
+              const std::vector<TVector3>  TPCClusters,
+              AliExternalTrackParam * unsmear,
+              float bz,
+              double sy,
+              double sz,
+              int dir,
+              int printlevel
               )
 {
   size_t InitialTPNTPCClusters = 100;
@@ -506,10 +509,14 @@ void fastTrackerGAR::CalculateCovariance(const std::vector<XYZVector>  TPCCluste
   size_t farTPCCluster = TMath::Min(nTPCClusters-1, InitialTPNTPCClusters);
   size_t intTPCCluster = farTPCCluster/2;
   size_t lastTPCCluster = nTPCClusters-1;
+
+  Double_t curvature_init = unsmear->GetC(bz);
+  Double_t lambda_init = TMath::ATan(unsmear->GetParameter()[3]);
+  Double_t phi_init = TMath::ASin(unsmear->GetParameter()[2]);
   
 
-  std::vector<XYZVector> xyz3points;
-  XYZVector xyzpoint;
+  std::vector<TVector3> xyz3points;
+  TVector3 xyzpoint;
 
   
 
@@ -535,78 +542,101 @@ void fastTrackerGAR::CalculateCovariance(const std::vector<XYZVector>  TPCCluste
   double curvature_smear, lambda_smear, phi_smear;
 
   /////
-  xyz3points[2].SetY(xyz3points[2].Y()+sxy);
+  xyz3points[2].SetY(xyz3points[2].Y()+sy);
 
-  Helix_Fit(xyz3points,xyzpoint,curvature_smear,lambda_smear,phi_smear,printlevel);
+  AliExternalTrackParam * smear0 = Helix_Fit(xyz3points,bz,sy,sz,dir,printlevel);
 
-  Double_t f40=(curvature_smear-curvature_init)/sxy;
-  Double_t f23=(phi_smear-phi_init)/sxy;
-  Double_t f30=(lambda_smear-lambda_init)/sxy;
+  curvature_smear = smear0->GetC(bz);
+  lambda_smear = TMath::ATan(smear0->GetParameter()[3]);
+  phi_smear = TMath::ASin(smear0->GetParameter()[2]);
 
-  xyz3points[2].SetY(xyz3points[2].Y()-sxy);
+  Double_t f40=(curvature_smear-curvature_init)/sy;
+  Double_t f23=(phi_smear-phi_init)/sy;
+  Double_t f30=(lambda_smear-lambda_init)/sy;
+
+  xyz3points[2].SetY(xyz3points[2].Y()-sy);
   //////
 
 
 
   /////
-  xyz3points[1].SetY(xyz3points[1].Y()+sxy);
+  xyz3points[1].SetY(xyz3points[1].Y()+sy);
 
-  Helix_Fit(xyz3points,xyzpoint,curvature_smear,lambda_smear,phi_smear,printlevel);
+  AliExternalTrackParam * smear1 = Helix_Fit(xyz3points,bz,sy,sz,dir,printlevel);
 
-  Double_t f42=(curvature_smear-curvature_init)/sxy;
-  Double_t f22=(phi_smear-phi_init)/sxy;
-  Double_t f32=(lambda_smear-lambda_init)/sxy;
+  curvature_smear = smear1->GetC(bz);
+  lambda_smear = TMath::ATan(smear1->GetParameter()[3]);
+  phi_smear = TMath::ASin(smear1->GetParameter()[2]);
 
-  xyz3points[1].SetY(xyz3points[1].Y()-sxy);
+  Double_t f42=(curvature_smear-curvature_init)/sy;
+  Double_t f22=(phi_smear-phi_init)/sy;
+  Double_t f32=(lambda_smear-lambda_init)/sy;
+
+  xyz3points[1].SetY(xyz3points[1].Y()-sy);
   //////
 
 
   /////
-  xyz3points[0].SetY(xyz3points[0].Y()+sxy);
+  xyz3points[0].SetY(xyz3points[0].Y()+sy);
 
-  Helix_Fit(xyz3points,xyzpoint,curvature_smear,lambda_smear,phi_smear,printlevel);
+  AliExternalTrackParam * smear2 = Helix_Fit(xyz3points,bz,sy,sz,dir,printlevel);
 
-  Double_t f43=(curvature_smear-curvature_init)/sxy;
-  Double_t f20=(phi_smear-phi_init)/sxy;
+  curvature_smear = smear2->GetC(bz);
+  lambda_smear = TMath::ATan(smear2->GetParameter()[3]);
+  phi_smear = TMath::ASin(smear2->GetParameter()[2]);
 
-  xyz3points[0].SetY(xyz3points[0].Y()-sxy);
+  Double_t f43=(curvature_smear-curvature_init)/sy;
+  Double_t f20=(phi_smear-phi_init)/sy;
+
+  xyz3points[0].SetY(xyz3points[0].Y()-sy);
   //////
 
   /////
-  xyz3points[2].SetX(xyz3points[2].X()+sxy);
+  xyz3points[2].SetX(xyz3points[2].X()+sy);
 
-  Helix_Fit(xyz3points,xyzpoint,curvature_smear,lambda_smear,phi_smear,printlevel);
+  AliExternalTrackParam * smear3 = Helix_Fit(xyz3points,bz,sy,sz,dir,printlevel);
 
-  Double_t f31=(lambda_smear-lambda_init)/sxy;
+  curvature_smear = smear3->GetC(bz);
+  lambda_smear = TMath::ATan(smear3->GetParameter()[3]);
+  phi_smear = TMath::ASin(smear3->GetParameter()[2]);
 
-  xyz3points[2].SetY(xyz3points[2].X()-sxy);
+  Double_t f31=(lambda_smear-lambda_init)/sz;
+
+  xyz3points[2].SetY(xyz3points[2].X()-sz);
   //////
 
   /////
-  xyz3points[1].SetX(xyz3points[1].X()+sxy);
+  xyz3points[1].SetX(xyz3points[1].X()+sz);
 
-  Helix_Fit(xyz3points,xyzpoint,curvature_smear,lambda_smear,phi_smear,printlevel);
+  AliExternalTrackParam * smear4 = Helix_Fit(xyz3points,bz,sy,sz,dir,printlevel);
 
-  Double_t f34=(lambda_smear-lambda_init)/sxy;
+  curvature_smear = smear4->GetC(bz);
+  lambda_smear = TMath::ATan(smear4->GetParameter()[3]);
+  phi_smear = TMath::ASin(smear4->GetParameter()[2]);
 
-  xyz3points[1].SetY(xyz3points[1].X()-sxy);
+  Double_t f34=(lambda_smear-lambda_init)/sz;
+
+  xyz3points[1].SetY(xyz3points[1].X()-sz);
   //////
 
 
-  double sxy2 = sxy*sxy;
-  P[0][0]=sxy2;
-  P[1][1]=sxy2;
-  P[2][2]=f20*sxy2*f20+f22*sxy2*f22+f23*sxy2*f23;
-  P[3][3]=f30*sxy2*f30+f31*sxy2*f31+f32*sxy2*f32+f34*sxy2*f34; 
-  P[4][4]=f40*sxy2*f40+f42*sxy2*f42+f43*sxy2*f43;
+  double sy2 = sy*sy;
+  double sz2 = sz*sz;
 
-  P[2][2]*=cos(phi_init)*cos(phi_init);//=sin(sqrt(P[2][2]))*sin(sqrt(P[2][2]));
-  P[3][3]/=cos(lambda_init)*cos(lambda_init);//=tan(sqrt(P[3][3]))*tan(sqrt(P[3][3]));
-  P[4][4]/=(0.5*0.3e-2)*(0.5*0.3e-2); // transform to 1/pt
+  
+  c[0]=sy2;
+  c[2]=sz2;
+  c[5]=f20*sy2*f20+f22*sy2*f22+f23*sy2*f23;
+  c[9]=f30*sy2*f30+f31*sz2*f31+f32*sy2*f32+f34*sz2*f34; 
+  c[14]=f40*sy2*f40+f42*sy2*f42+f43*sy2*f43;
+
+  c[5]*=cos(phi_init)*cos(phi_init);//=sin(sqrt(P[2][2]))*sin(sqrt(P[2][2]));
+  c[9]/=cos(lambda_init)*cos(lambda_init);//=tan(sqrt(P[3][3]))*tan(sqrt(P[3][3]));
+  c[14]/=(0.5*0.3e-2)*(0.5*0.3e-2); // transform to 1/pt
   //P[4][4]*=0.2*0.2;
   
 
 }
-*/
+
 
 #endif
