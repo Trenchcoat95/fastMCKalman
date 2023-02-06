@@ -11,7 +11,9 @@
 #include "TTreeStream.h"
 #include "TRandom.h"
 #include "fastTracker.h"
+#include "fastTrackerGAR.h"
 #include <TMatrixD.h>
+#include <TVector3.h>
 
 
 TTreeSRedirector* fastParticle::fgStreamer = nullptr;
@@ -2200,6 +2202,44 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
                                                               geom.fBz,geom.fLayerX0[indexst],geom.fLayerRho[indexst],fMassMC);
   AliExternalTrackParam   paramRot(paramSeed->GetX(),alpha0, paramSeed->GetParameter(),paramSeed->GetCovariance());
   AliExternalTrackParam4D param(paramRot,mass,1);
+
+  if(fUseGArSeeding)
+  {
+    std::vector<TVector3> points;
+    double crossLengthSeed = 0;
+    size_t n = 0;
+    Double_t alphast = 0;
+
+    for(size_t o = index1+1; o<fParamMC.size(); o++) 
+    {     
+      double xyz[3];
+      fParamMC[o].GetXYZ(xyz);  
+      if(o==index1+1) 
+      {
+        alphast = TMath::ATan2(xyz[1],xyz[0]);
+        if      (alphast < -TMath::Pi()) alphast += 2*TMath::Pi();
+        else if (alphast >= TMath::Pi()) alphast -= 2*TMath::Pi();
+      }
+      TVector3 tr(xyz[2], //z
+                  -xyz[0]*sin(alphast) + xyz[1]*cos(alphast),   //y
+                  xyz[0]*cos(alphast) + xyz[1]*sin(alphast));  //x
+      points.push_back(tr);         
+
+      if(o>index1+1) crossLengthSeed+=sqrt(pow(points[n][0]-points[n-1][0],2)+pow(points[n][1]-points[n-1][1],2)+pow(points[n][2]-points[n-1][2],2));
+      n++;
+    }    
+    AliExternalTrackParam * partest = fastTrackerGAR::Helix_Fit(points,geom.fBz,geom.fLayerResolRPhi[indexst],geom.fLayerResolZ[indexst],1,0);            
+    Double_t c[15] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    fastTrackerGAR::CalculateCovariance(c,points,partest,geom.fBz,fLayerResolRPhi[indexst],geom.fLayerResolZ[indexst],1,0);
+    AliExternalTrackParam   paramRotGAr(partest->GetX(),alphast, partest->GetParameter(),c);          
+    AliExternalTrackParam4D paramGAr(paramRotGAr,fMassMC,1);
+
+    for (Int_t ic=0;ic<10; ic++) {
+        Bool_t status = paramGAr.CorrectForMeanMaterial(crossLengthSeed * geom.fLayerX0[indexst]/10., crossLengthSeed * geom.fLayerRho[indexst]/10., fMassMC, 0.01);
+        int i = 0;
+    }
+  }
+
   if (sign0<0) {
     ((double*)param.GetParameter())[4]*=-1;
     ((double*)param.GetParameter())[3]*=-1;

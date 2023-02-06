@@ -24,7 +24,7 @@ public:
   static double capprox(double x1,double y1,double x2,double y2,double x3,double y3,double &xc, double &yc);
   static void ouchef(double *x, double *y, int np, double &xcirccent, double &ycirccent,double &rcirc, double &chisq, int &ifail);
   static void CalculateCovariance(Double_t (&c)[15],const std::vector<TVector3>  TPCClusters,AliExternalTrackParam * unsmear,float bz, double sy, double sz,int dir,int printlevel);
-
+  //static AliExternalTrackParam makeSeedGAr(std::vector<double *> points,double b, double sy, double sz);
 };
 
 
@@ -361,6 +361,8 @@ void fastTrackerGAR::ouchef(double *x, double *y, int np, double &xcirccent, dou
 }
 
 
+
+
 AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  TPCClusters,
               float bz , Double_t sy, Double_t sz, int dir, int printlevel)
 {
@@ -632,11 +634,42 @@ void fastTrackerGAR::CalculateCovariance(
 
   c[5]*=cos(phi_init)*cos(phi_init);//=sin(sqrt(P[2][2]))*sin(sqrt(P[2][2]));
   c[9]/=cos(lambda_init)*cos(lambda_init);//=tan(sqrt(P[3][3]))*tan(sqrt(P[3][3]));
-  c[14]/=(0.5*0.3e-2)*(0.5*0.3e-2); // transform to 1/pt
+  c[14]/=(bz*kB2C)*(bz*kB2C); // transform to 1/pt
   //P[4][4]*=0.2*0.2;
   
 
 }
+
+// AliExternalTrackParam fastTrackerGAR::makeSeedGAr(std::vector<double *> points, double b, double sy, double sz)
+// {
+  
+//   Double_t alphast = TMath::ATan2(points[0][1],points[0][0]);
+//   if      (alphast < -TMath::Pi()) alphast += 2*TMath::Pi();
+//   else if (alphast >= TMath::Pi()) alphast -= 2*TMath::Pi();
+
+
+//   std::vector<TVector3> conv_points;
+//   for(size_t o = 0; o<points.size(); o++) 
+//   {
+//     Double_t x0 =  points[o][0];
+//     Double_t y0 =  points[o][1];
+//     TVector3 tr(points[0][2], //z
+//                 -x0*sin(alphast) + y0*cos(alphast),   //y
+//                  x0*cos(alphast) + y0*sin(alphast));  //x
+//     conv_points.push_back(tr);
+    
+//   }
+
+//   AliExternalTrackParam * partest = fastTrackerGAR::Helix_Fit(conv_points,b,sy,sz,1,0);
+  
+//   Double_t c[15] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//   fastTrackerGAR::CalculateCovariance(c,conv_points,partest,b,sy,sz,1,0);
+
+//   AliExternalTrackParam   paramRot(partest->GetX(),alphast, partest->GetParameter(),c);
+
+//   return paramRot;
+
+// }
 
 
 #endif

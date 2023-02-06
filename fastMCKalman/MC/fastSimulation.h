@@ -126,6 +126,7 @@ public:
   int                        fAddMSsmearing;     //   flag to add smearing during simulation
   int                        fAddPadsmearing;     //   flag to add Pad smearing during reconstruction
   int                        fUseMCInfo;     //   flag to "cheat" reconstruction using MCInfo
+  int                        fUseGArSeeding;     //   flag to use the alternative 
   int                         gid;         // global id
   double fR[3];                            //   initial position
   double fP[3];                            //   initial momentum
