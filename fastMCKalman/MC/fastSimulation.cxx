@@ -2231,13 +2231,14 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
     AliExternalTrackParam * partest = fastTrackerGAR::Helix_Fit(points,geom.fBz,geom.fLayerResolRPhi[indexst],geom.fLayerResolZ[indexst],1,0);            
     Double_t c[15] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     fastTrackerGAR::CalculateCovariance(c,points,partest,geom.fBz,fLayerResolRPhi[indexst],geom.fLayerResolZ[indexst],1,0);
-    AliExternalTrackParam   paramRotGAr(partest->GetX(),alphast, partest->GetParameter(),c);          
+    AliExternalTrackParam   paramRotGAr(partest->GetX(),alphast, partest->GetParameter(),paramSeedI->GetCovariance());          
     AliExternalTrackParam4D paramGAr(paramRotGAr,fMassMC,1);
 
     for (Int_t ic=0;ic<10; ic++) {
         Bool_t status = paramGAr.CorrectForMeanMaterial(crossLengthSeed * geom.fLayerX0[indexst]/10., crossLengthSeed * geom.fLayerRho[indexst]/10., fMassMC, 0.01);
         int i = 0;
     }
+    param=paramGAr;
   }
 
   if (sign0<0) {
@@ -2275,7 +2276,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   delete paramSeed;
   delete paramSeedI;
   ///scale covaraine to avoid double counting
-  for (int i=0; i<15; i++) ((double*)param.GetCovariance())[i]*=kCovarFactor;
+  //for (int i=0; i<15; i++) ((double*)param.GetCovariance())[i]*=kCovarFactor;
 
   float length=0, time=0;
   float radius = sqrt(param.GetX()*param.GetX()+param.GetY()*param.GetY());

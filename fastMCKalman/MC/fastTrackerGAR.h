@@ -481,9 +481,9 @@ AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  T
 
   param[0]=xyz0[1];              
   param[1]=xyz0[0];
-  param[2]=TMath::Sin(phi_init);
-  param[3]=TMath::Tan(lambda_init);
-  param[4]=curvature_init/(kB2C*bz);
+  param[2]=-TMath::Sin(phi_init);
+  param[3]=-TMath::Tan(lambda_init);
+  param[4]=-curvature_init/(kB2C*bz);
 
   Double_t alpha = TMath::ATan2(xyz0[1],xyz0[2]);
 
