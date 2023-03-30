@@ -336,6 +336,44 @@ ROOT::RVec<float>  LengthIn(ROOT::RVec<AliExternalTrackParam4D>& track, int Firs
   return Length;
 }
 
+ROOT::RVec<float>  Length3DOut(ROOT::RVec<AliExternalTrackParam4D>& track, int FirstIndex) {
+  ROOT::RVec<float> Length(track.size());
+  for (size_t i = 0; i < track.size(); i++) {
+    float Lengthtot = 0;
+    if(i>size_t(FirstIndex)){    
+      for(size_t j = 0; j < size_t(i-FirstIndex); j++)
+        {
+          Double_t xyz0[3];
+          Double_t xyzi[3];
+          track[FirstIndex+j].GetXYZ(xyz0);
+          track[FirstIndex+j+1].GetXYZ(xyzi);
+          Lengthtot+=TMath::Sqrt((xyz0[0]-xyzi[0])*(xyz0[0]-xyzi[0])+(xyz0[1]-xyzi[1])*(xyz0[1]-xyzi[1])+(xyz0[2]-xyzi[2])*(xyz0[2]-xyzi[2]));
+        }
+      }
+    Length[i] = Lengthtot;
+  }
+  return Length;
+}
+
+ROOT::RVec<float>  Length3DIn(ROOT::RVec<AliExternalTrackParam4D>& track, int FirstIndex) {
+  ROOT::RVec<float> Length(track.size());
+  for (size_t i = 0; i < track.size(); i++) {
+    float Lengthtot = 0;
+    if(i<size_t(FirstIndex)){ 
+      for(size_t j = i; j < size_t(FirstIndex); j++)
+        {
+          Double_t xyzMC0[3];
+          Double_t xyzi[3];
+          track[j].GetXYZ(xyzMC0);
+          track[j+1].GetXYZ(xyzi);
+          Lengthtot+=TMath::Sqrt((xyzMC0[0]-xyzi[0])*(xyzMC0[0]-xyzi[0])+(xyzMC0[1]-xyzi[1])*(xyzMC0[1]-xyzi[1])+(xyzMC0[2]-xyzi[2])*(xyzMC0[2]-xyzi[2]));
+        }
+    }
+    Length[i] = Lengthtot;
+  }
+  return Length;
+}
+
 
 ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void>  makeDataFrame(TTree * treeFast){
   // problem defining parameters in scope
@@ -424,6 +462,7 @@ ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void>  makeDataFrame(TTre
      if(iType==0)
      {
       rdf1 = rdf1.Define(Form("LengthXY%s",type),LengthIn,{Form("partFull.fParam%s",type), Form("partFull.fFirstIndex%s",type)});
+      rdf1 = rdf1.Define(Form("Length3D%s",type),Length3DIn,{Form("partFull.fParam%s",type), Form("partFull.fFirstIndex%s",type)});
       rdf1 = rdf1.Define(Form("AvgInvBetapT%s",type),AvgInvBetapTIn,{Form("partFull.fParam%s",type), "partFull.fMassMC", Form("partFull.fFirstIndex%s",type)});
       rdf1 = rdf1.Define(Form("AvgSqrtdEdxOverpT%s",type),AvgSqrtdEdxOverpTIn,{Form("partFull.fParam%s",type), "partFull.fMassMC", Form("partFull.fFirstIndex%s",type)});
       rdf1 = rdf1.Define(Form("LengthXY%sLeg",type),LengthIn,{Form("part.fParam%s",type), Form("part.fFirstIndex%s",type)});
@@ -433,6 +472,7 @@ ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void>  makeDataFrame(TTre
      }
      else{
       rdf1 = rdf1.Define(Form("LengthXY%s",type),LengthOut,{Form("partFull.fParam%s",type), Form("partFull.fFirstIndex%s",type)});
+      rdf1 = rdf1.Define(Form("Length3D%s",type),Length3DOut,{Form("partFull.fParam%s",type), Form("partFull.fFirstIndex%s",type)});
       rdf1 = rdf1.Define(Form("AvgSqrtdEdxOverpT%s",type),AvgSqrtdEdxOverpTOut,{Form("partFull.fParam%s",type), "partFull.fMassMC", Form("partFull.fFirstIndex%s",type)});
       rdf1 = rdf1.Define(Form("AvgInvBetapT%s",type),AvgInvBetapTOut,{Form("partFull.fParam%s",type), "partFull.fMassMC", Form("partFull.fFirstIndex%s",type)});
      }
@@ -442,6 +482,7 @@ ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void>  makeDataFrame(TTre
   
   rdf1 = rdf1.Define("LArmRefit","LArmIn+LArmOut");
   rdf1 = rdf1.Define("LengthXYRefit","LengthXYIn+LengthXYOut");
+  rdf1 = rdf1.Define("Length3DRefit","Length3DIn+Length3DOut");
   rdf1 = rdf1.Define("AvgSqrtdEdxOverpTRefit","(AvgSqrtdEdxOverpTIn+AvgSqrtdEdxOverpTOut)/2");
 
   rdf1 = rdf1.Define("covarIn4ExpLPTMoliere","10.674*abs(paramIn4)/(BetaIn*sqrt(LengthXYIn*layerX0))");
@@ -458,6 +499,14 @@ ROOT::RDF::RInterface<ROOT::Detail::RDF::RLoopManager, void>  makeDataFrame(TTre
   rdf1 = rdf1.Define("covarInLeg4ExpHPT","17900.928*sigmaRPhi/((LArmInLeg*LArmInLeg)*(sqrt(part.fNPointsIn)))");
   rdf1 = rdf1.Define("covarOut4ExpHPT","17900.928*sigmaRPhi/((LArmOut*LArmOut)*(sqrt(partFull.fNPointsOut)))");
   rdf1 = rdf1.Define("covarRefit4ExpHPT","17900.928*sigmaRPhi/((LArmRefit*LArmRefit)*(sqrt(partFull.fNPointsRefit)))");
+
+  rdf1 = rdf1.Define("pMC","abs(1/paramMC4)*sqrt(1+paramMC3*paramMC3)");
+  rdf1 = rdf1.Define("pIn","abs(1/paramIn4)*sqrt(1+paramIn3*paramIn3)");
+  rdf1 = rdf1.Define("pOut","abs(1/paramOut4)*sqrt(1+paramOut3*paramOut3)");
+  rdf1 = rdf1.Define("pRefit","abs(1/paramRefit4)*sqrt(1+paramRefit3*paramRefit3)");
+  rdf1 = rdf1.Define("deltaInp","pMC-pIn");
+  rdf1 = rdf1.Define("deltaOutp","pMC-pOut");
+  rdf1 = rdf1.Define("deltaRefitp","pMC-pRefit");
   return rdf1;
 }
 
@@ -491,7 +540,7 @@ void drawdEdxResolution(){
   // sigmadEdx=k*((2/Beta^3)*sigmaBeta= 2*dedx/Beta*sigmaBeta --> sigmaBeta=Beta*(sigmadEdx/dEdx)/2.
   treeFast->SetAlias("betaResRel","sigmadEdxRel/2."); // 1/Beta^2 ~ dEdx  sigmadEdx=k*((2/Beta^3)*sigmaBeta= dedx/Beta*sigmaBeta
   treeFast->SetAlias("pResRel","betaResRel*2");    // in the region where Beta<<1
-  treeFast->Draw("pResRel:1/ptMC:densScaling","ptMC<2&&ptMC>0.05&&pidCode==4&&hasDecay==0&&densScaling>5","colz",100000)
+  treeFast->Draw("pResRel:1/ptMC:densScaling","ptMC<2&&ptMC>0.05&&pidCode==4&&hasDecay==0&&densScaling>5","colz",100000);
 
 
 }

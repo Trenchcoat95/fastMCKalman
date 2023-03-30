@@ -47,8 +47,8 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
   const Int_t   nPoints=nLayerTPC*4;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
   const Float_t kMinPt=0.02;
   const Float_t kMax1Pt=1./100.;
-  const Float_t kFlatPtMax=50;
-  const Float_t kFlatPtFraction=0.3;
+  const Float_t kFlatPtMax=5;
+  const Float_t kFlatPtFraction=1;
   const Float_t smearR=200;
   const Float_t smearZ=200;
   const Float_t  xx0=7.8350968e-05;
@@ -80,8 +80,8 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
     particle.fgStreamer=pcstream;
     particle.gid=i;
     // generate scan detector properties
-    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*kMaterialScaling)+0.0;
-    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: gRandom->Rndm()*kMaxResol;
+    Float_t matScaling  = 10;//(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*kMaterialScaling)+0.0;
+    Float_t resolScan= 0.1;//(gRandom->Rndm()<kNominalFraction) ? kDefResol: gRandom->Rndm()*kMaxResol;
     for (size_t iLayer=0; iLayer<geom.fLayerX0.size();iLayer++) {
       geom.fLayerX0[iLayer] = xx0 * matScaling;
       geom.fLayerRho[iLayer] = xrho * matScaling;
@@ -89,7 +89,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
       geom.fLayerResolZ[iLayer] = resolScan;
     }
     double r[]     = {0,0,0};
-    Bool_t  isSecondary=gRandom->Rndm()<0.5;
+    Bool_t  isSecondary=kTRUE;//gRandom->Rndm()<0.5;
     // isSecondary=kFALSE;
     if (isSecondary){
         r[0]=2*(gRandom->Rndm()-0.5)*smearR;
@@ -101,7 +101,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
     double phi     = gRandom->Rndm()*TMath::TwoPi();
     double theta = (gRandom->Rndm()-0.5)*3;
     double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
-    int    pidCode=int(gRandom->Rndm()*5);          //avoid unrecognized pdg codes
+    int    pidCode=1;//int(gRandom->Rndm()*5);          //avoid unrecognized pdg codes
     short  charge  = (gRandom->Rndm()<0.5) ? -1:1;
     int64_t   pdgCode = AliPID::ParticleCode(pidCode)*charge;
     if (gRandom->Rndm()<kRandomPDGFraction) {
