@@ -12,7 +12,8 @@
 class fastTracker{
 public:
   static AliExternalTrackParam* makeSeed(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz);
-  static AliExternalTrackParam* makeSeedMB(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0, float xrho, float mass,int nSteps=5);
+  static AliExternalTrackParam* makeSeedMB(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0, float xrho, float mass,int nSteps=5,float cross1=0, float cross2=0);
+  static AliExternalTrackParam* makeSeedMB4(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0, float xrho, float mass,int nSteps=5, bool MSsmearing = kTRUE, float cross1=0, float cross2=0);
   static Double_t makeC(Double_t x1,Double_t y1, Double_t x2,Double_t y2, Double_t x3,Double_t y3);     // F1
   static Double_t makeSnp(Double_t x1,Double_t y1,Double_t x2,Double_t y2,Double_t x3,Double_t y3);     // F2
   static Double_t makeYC(Double_t x1,Double_t y1,Double_t x2,Double_t y2,Double_t x3,Double_t y3);     // YC
@@ -170,13 +171,14 @@ AliExternalTrackParam * fastTracker::makeSeed(double xyz0[3], double xyz1[3], do
 /// \param xrhotocm
 /// \param mass
 /// \return
-AliExternalTrackParam* fastTracker::makeSeedMB(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0tocm, float xrhotocm, float mass, int nSteps){
+AliExternalTrackParam* fastTracker::makeSeedMB(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0tocm, float xrhotocm, float mass, int nSteps, float cross1, float cross2){
   // calculate momentum loss between the seeding points
   // linear approximation   p0 -> p1 -> p2
   // in case seeding radius is homogenous - pSeed ~ (p0+p1+p2)/3    p0~ pSeed*3-p1-p2
   // in case different gaps - TODO later
   AliExternalTrackParam *extParam = makeSeed(xyz0,xyz1,xyz2,sy,sz,bz);   // first estimation
   AliExternalTrackParam paramFull=*extParam;
+  paramFull.SetUseLogTermMS(kTRUE);
   AliExternalTrackParam paramFullnoMC=paramFull;
   Double_t *xyz[3]={xyz0,xyz1,xyz2};
   Double_t deltaCovar[15];
@@ -185,10 +187,12 @@ AliExternalTrackParam* fastTracker::makeSeedMB(double xyz0[3], double xyz1[3], d
   Double_t p0[3]={paramFull.Pt()};
   for (int i=1; i<3; i++) {
 
-    double crossLength = (xyz[i][0] - xyz[i - 1][0]) * (xyz[i][0] - xyz[i - 1][0]) +
+    double crossLength = ((xyz[i][0] - xyz[i - 1][0]) * (xyz[i][0] - xyz[i - 1][0]) +
                          (xyz[i][1] - xyz[i - 1][1]) * (xyz[i][1] - xyz[i - 1][1]) +
-                         (xyz[i][2] - xyz[i - 1][2]) * (xyz[i][2] - xyz[i - 1][2]);
+                         (xyz[i][2] - xyz[i - 1][2]) * (xyz[i][2] - xyz[i - 1][2]));
     crossLength = TMath::Sqrt(crossLength);
+    if(cross1!=0 && i==1) crossLength=cross1;
+    if(cross2!=0 && i==2) crossLength=cross2;
     for (int j = 0; j < nSteps; j++) {
       propStatus &= paramFull.PropagateTo((xyz[i-1][0]+((j+1)*(xyz[i][0]-xyz[i-1][0])/nSteps)), bz);    
       propStatus &= paramFull.CorrectForMeanMaterial(crossLength * xx0tocm / nSteps, crossLength * xrhotocm / nSteps, mass, kFALSE);
@@ -197,6 +201,59 @@ AliExternalTrackParam* fastTracker::makeSeedMB(double xyz0[3], double xyz1[3], d
 
     p0[i]=paramFull.Pt();
     if (i == 1) {
+      for (int iCovar = 0; iCovar < 15; iCovar++) {
+        deltaCovar[iCovar] = paramFull.GetCovariance()[iCovar] - paramFullnoMC.GetCovariance()[iCovar];
+      }
+    }
+  }
+  // Formula below approximation in case equal material distance of seeding layer
+  Double_t ratio1= p0[1]/p0[0];
+  Double_t ratio2= p0[2]/p0[0];
+  //Double_t p0N=3.*p0[0]/(ratio2+ratio1+1.);
+  Double_t p0NRatio=3./(ratio2+ratio1+1.);
+  /// This hack - we should get proper curvature/sagita formula
+  //
+  ((double*)extParam->GetParameter())[4]/=  p0NRatio;
+  ((double*)extParam->GetCovariance())[5] +=deltaCovar[5];
+  ((double*)extParam->GetCovariance())[9] +=deltaCovar[9];
+  ((double*)extParam->GetCovariance())[14]+=deltaCovar[14];
+  return extParam;
+}
+
+
+AliExternalTrackParam* fastTracker::makeSeedMB4(double xyz0[3], double xyz1[3], double xyz2[3], double sy, double sz, float bz, float xx0tocm, float xrhotocm, float mass, int nSteps, bool MSsmearing, float cross1, float cross2){
+  // calculate momentum loss between the seeding points
+  // linear approximation   p0 -> p1 -> p2
+  // in case seeding radius is homogenous - pSeed ~ (p0+p1+p2)/3    p0~ pSeed*3-p1-p2
+  // in case different gaps - TODO later
+  AliExternalTrackParam *extParam = makeSeed(xyz0,xyz1,xyz2,sy,sz,bz);   // first estimation
+  AliExternalTrackParam paramFulls=*extParam;
+  AliExternalTrackParam4D paramFull(paramFulls,mass,1);
+
+  paramFull.SetUseLogTermMS(kTRUE);
+  AliExternalTrackParam4D paramFullnoMC=paramFull;
+  Double_t *xyz[3]={xyz0,xyz1,xyz2};
+  Double_t deltaCovar[15];
+
+  Bool_t propStatus=kTRUE;
+  Double_t p0[3]={paramFull.Pt()};
+  for (int i=1; i<3; i++) {
+
+    double crossLength = ((xyz[i][0] - xyz[i - 1][0]) * (xyz[i][0] - xyz[i - 1][0]) +
+                         (xyz[i][1] - xyz[i - 1][1]) * (xyz[i][1] - xyz[i - 1][1]) +
+                         (xyz[i][2] - xyz[i - 1][2]) * (xyz[i][2] - xyz[i - 1][2]));
+    crossLength = TMath::Sqrt(crossLength);
+    if(cross1!=0 && i==1) crossLength=cross1;
+    if(cross2!=0 && i==2) crossLength=cross2;
+    
+    for (int j = 0; j < nSteps; j++) {
+      propStatus &= paramFull.PropagateTo((xyz[i-1][0]+((j+1)*(xyz[i][0]-xyz[i-1][0])/nSteps)), bz,1);    
+      if(i==2) propStatus &= paramFull.CorrectForMeanMaterial(crossLength * xx0tocm/5., crossLength * xrhotocm/5., mass, 0.01, 0+0x2*MSsmearing);
+      propStatus &= paramFullnoMC.PropagateTo((xyz[i-1][0]+((j+1)*(xyz[i][0]-xyz[i-1][0])/nSteps)), bz, 1);
+    }
+
+    p0[i]=paramFull.Pt();
+    if (i == 2) {
       for (int iCovar = 0; iCovar < 15; iCovar++) {
         deltaCovar[iCovar] = paramFull.GetCovariance()[iCovar] - paramFullnoMC.GetCovariance()[iCovar];
       }

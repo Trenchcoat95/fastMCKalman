@@ -21,7 +21,7 @@ const Int_t kMaxLayers=10000;
 //#pragma link C++ class RVec<std::vector<int>>;
 
 class TTreeSRedirector;
-Float_t fracUnitTest=0; //0.1;
+Float_t fracUnitTest=0.1; //0.1;
 
 class AliExternalTrackParam4D: public AliExternalTrackParam{
 public:
@@ -106,7 +106,7 @@ public:
   ~fastParticle(){}
   fastParticle(int nLayers){
     fLayerIndex.reserve(nLayers); fDirection.reserve(nLayers); fParamIn.reserve(nLayers); fParamInRot.reserve(nLayers);
-    fParamOut.reserve(nLayers); fParamRefit.reserve(nLayers); fParamMC.reserve(nLayers);fStatusMaskMC.reserve(nLayers); 
+    fParamOut.reserve(nLayers); fParamRefit.reserve(nLayers); fParamMC.reserve(nLayers);fResolRPhi.reserve(nLayers);fResolZ.reserve(nLayers);fStatusMaskMC.reserve(nLayers); 
     fStatusMaskIn.reserve(nLayers); fStatusMaskOut.reserve(nLayers); fStatusMaskRefit.reserve(nLayers); fChi2.resize(nLayers);
     fLoop.reserve(nLayers); fNPointsMC.reserve(nLayers); fNPointsIn.reserve(nLayers); fNPointsOut.reserve(nLayers); fNPointsRefit.reserve(nLayers);
     fMaxLayer=0;
@@ -144,15 +144,17 @@ public:
   int                         fFirstIndexMC;   //   Index of the first simulated point
   int                         fFirstIndexIn;   //   Index of the first point used in the Inward reconstruction
   int                         fFirstIndexOut;   //  Index of the first point used in the Outward reconstruction
-   int                         fLengthInRot;   //   track length for in propagation
+  Float_t                         fLengthInRot;   //   track length for in propagation
    Float_t                     fDecayLength;  // decay length  -if length bigger than decay length - stop partilce
   RVec<int>                   fLayerIndex; //   layer index    - important for looper
   RVec<float>                  fDirection;  //   particle direction - Out=1, In = -1
   RVec<int>                   fLoop;          //   particle loop counter
   RVec<AliExternalTrackParam4D> fParamMC;    //   "simulate"      Param MC
+  RVec<float> fResolRPhi;    //   "simulate"      Param MC
+  RVec<float> fResolZ;    //   "simulate"      Param MC
   RVec<AliExternalTrackParam4D> fParamRefit;   //   "reconstructed" Param Out
   RVec<AliExternalTrackParam4D> fParamOut;   //   "reconstructed" Param Out
-  RVec<AliExternalTrackParam4D> fParamIn;    //   "reconstructed" Param In
+  RVec<AliExternalTrackParam4D> fParamIn;    //   "reconstrAliExternalTrackParam4Ducted" Param In
   RVec<AliExternalTrackParam4D> fParamInRot;    //   "reconstructed" Param In - in rotated frame
   RVec<int>      fStatusMaskMC;     //   status bit mask
   RVec<int>      fStatusMaskIn;     //   status bit mask

@@ -24,6 +24,8 @@ public:
   static double capprox(double x1,double y1,double x2,double y2,double x3,double y3,double &xc, double &yc);
   static void ouchef(double *x, double *y, int np, double &xcirccent, double &ycirccent,double &rcirc, double &chisq, int &ifail);
   static void CalculateCovariance(Double_t (&c)[15],const std::vector<TVector3>  TPCClusters,AliExternalTrackParam * unsmear,float bz, double sy, double sz,int dir,int printlevel);
+  static Double_t GArSigmaRPhi(Double_t R);
+  static Double_t GArSigmaZ(Double_t z);
   //static AliExternalTrackParam makeSeedGAr(std::vector<double *> points,double b, double sy, double sz);
 };
 
@@ -476,7 +478,7 @@ AliExternalTrackParam * fastTrackerGAR::Helix_Fit(const std::vector<TVector3>  T
 
 
   Double_t param[5];
-  Double_t c[15] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  Double_t c[15] = {2,0,2,0,0,0.003,0,0,0,0.0015,0,0,0,0,2};
   //CalculateCovariance(TPCClusters,c,curvature_init,lambda_init,phi_init,bz,sy,sz,dir,printlevel);
 
   param[0]=xyz0[1];              
@@ -638,6 +640,31 @@ void fastTrackerGAR::CalculateCovariance(
   //P[4][4]*=0.2*0.2;
   
 
+}
+
+Double_t fastTrackerGAR::GArSigmaRPhi(Double_t R){
+  Double_t sigma = 1;
+  if(R<82){
+    sigma = 0.6+0.005*R-0.00002*R*R;
+    return sigma;
+  }
+  else if(R<130 && R>87){
+    sigma = 0.8-0.002*R+0.00002*R*R;
+    return sigma;
+  }
+  else if(R<135 && R>87){
+    sigma = -0.7+0.014*R-0.000035*R*R;
+    return sigma;
+  }
+  else {
+    return sigma;
+  }
+
+}
+
+Double_t fastTrackerGAR::GArSigmaZ(Double_t Z){
+  Double_t sigma = 0.07-0.0002*Z-0.0000025*Z*Z-0.00000001*Z*Z*Z;
+  return sigma;
 }
 
 // AliExternalTrackParam fastTrackerGAR::makeSeedGAr(std::vector<double *> points, double b, double sy, double sz)
