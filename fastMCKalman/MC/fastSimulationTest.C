@@ -44,7 +44,7 @@ void testDummy(){
 void testTPC(Int_t nParticles, bool dumpStream=1){
 
   const Int_t   nLayerTPC=250;
-  const Int_t   nPoints=nLayerTPC*4;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
+  const Int_t   nPoints=nLayerTPC*100;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
   const Float_t kMinPt=0.02;
   const Float_t kMax1Pt=1./100.;
   const Float_t kFlatPtMax=50;

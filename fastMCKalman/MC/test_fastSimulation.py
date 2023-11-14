@@ -1,7 +1,7 @@
 # include fastMCKalman to the path
 # import sys,os; sys.path.insert(1, os.environ[f"fastMCKalman"]+'/fastMCKalman/MC/');  from test_fastSimulation import *
 import sys,os;
-sys.path.insert(1, os.environ[f"fastMCKalman"]+'/fastMCKalman/MC/');
+sys.path.insert(1, os.environ[f"fastMCKalman"]+'/fastMCKalman/MC/')
 import ROOT
 from ROOT import TFile, gSystem
 from fastSimulation import *

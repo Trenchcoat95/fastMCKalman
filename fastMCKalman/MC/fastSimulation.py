@@ -2,9 +2,10 @@
 import ROOT
 from ROOT import gROOT, gStyle,gSystem
 
-gSystem.Load("$fastMCKalman/fastMCKalman/aliKalman/test/AliExternalTrackParam.so");
+gSystem.Load("$fastMCKalman/fastMCKalman/aliKalman/test/AliExternalTrackParam.so")
 gROOT.LoadMacro("$fastMCKalman/fastMCKalman/MC//fastSimulation.cxx+")
 gROOT.LoadMacro("$fastMCKalman/fastMCKalman/MC/fastSimulationTest.C")
+gROOT.LoadMacro("$fastMCKalman/fastMCKalman/MC/test_fastSimulation.C")
 #AliDrawStyle.SetDefaults()
 #AliDrawStyle.ApplyStyle("figTemplate")
 #gStyle.SetOptTitle(1)
