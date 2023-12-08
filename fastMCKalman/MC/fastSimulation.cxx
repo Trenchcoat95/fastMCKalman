@@ -1834,9 +1834,9 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 
   AliExternalTrackParam * paramSeedI = fastTracker::makeSeed(xyzS[0],xyzS[1],xyzS[2],resolrphi,resolz,geom.fBz);
   AliExternalTrackParam * paramSeed = fastTracker::makeSeedMB(xyzS[0],xyzS[1],xyzS[2],resolrphi,resolz,
-                                                              geom.fBz,geom.fLayerX0[indexst],geom.fLayerRho[indexst],fMassMC,5);
+                                                              geom.fBz,geom.fLayerX0[indexst],geom.fLayerRho[indexst],mass,5);
   AliExternalTrackParam * paramSeed4D = fastTracker::makeSeedMB4(xyzS[0],xyzS[1],xyzS[2],resolrphi,resolz,
-                                                              geom.fBz,geom.fLayerX0[indexst],geom.fLayerRho[indexst],fMassMC,1,fAddMSsmearing);
+                                                              geom.fBz,geom.fLayerX0[indexst],geom.fLayerRho[indexst],mass,1,fAddMSsmearing);
   AliExternalTrackParam   paramRot(paramSeed->GetX(),alpha0, paramSeed->GetParameter(),paramSeed->GetCovariance());
   AliExternalTrackParam4D param(paramRot,mass,1);
 
