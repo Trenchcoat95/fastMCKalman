@@ -25,8 +25,8 @@
 #include "TPad.h"
 #include "TCanvas.h"
 #include "AliPID.h"
-const Float_t kDecayFraction=0.5;
-const Float_t kRandomPDGFraction=0.25;
+const Float_t kDecayFraction=0;
+const Float_t kRandomPDGFraction=0;
 
 TChain * treeFast = 0;
 TChain * treeTurn=0;
@@ -45,17 +45,20 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
 
   const Int_t   nLayerTPC=250;
   const Int_t   nPoints=nLayerTPC*100;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
-  const Float_t kMinPt=0.02;
-  const Float_t kMax1Pt=1./100.;
-  const Float_t kFlatPtMax=50;
-  const Float_t kFlatPtFraction=0.3;
+  const Float_t kMinPt=0.01;
+  const Float_t kMax1Pt=1./20.;
+  const Float_t kFlatPtMin=0.01;
+  const Float_t kFlatPtMax=20;
+  const Float_t kFlatPtFraction=0.7;
+  const Float_t kSecondaryFraction = 0.5;
   const Float_t smearR=200;
   const Float_t smearZ=200;
   const Float_t  xx0=7.8350968e-05;
   const Float_t  xrho=0.0016265266;
-  const Float_t kNominalFraction=0.3;     // fraction of nominal properties
+  const Float_t kNominalFraction=0;     // fraction of nominal properties
   const Float_t kMaterialScaling=10;      // material random scaling to
-  const Float_t kMaxResol=0.2;            // point resolution scan max resolution
+  const Float_t kMinMaterialScaling=0.1;      // material random scaling to
+  const Float_t kMaxResol=0.5;            // point resolution scan max resolution
   const Float_t kMinResol=0.01;           //  point resolution scan min resolution
   const Float_t kDefResol=0.1;           //  point resolution scan min resolution
 
@@ -80,8 +83,8 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
     particle.fgStreamer=pcstream;
     particle.gid=i;
     // generate scan detector properties
-    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*kMaterialScaling)+0.0;
-    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: gRandom->Rndm()*kMaxResol;
+    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*(kMaterialScaling-kMinMaterialScaling)+kMinMaterialScaling);
+    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: (gRandom->Rndm()*(kMaxResol-kMinResol)+kMinResol);
     for (size_t iLayer=0; iLayer<geom.fLayerX0.size();iLayer++) {
       geom.fLayerX0[iLayer] = xx0 * matScaling;
       geom.fLayerRho[iLayer] = xrho * matScaling;
@@ -89,15 +92,20 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
       geom.fLayerResolZ[iLayer] = resolScan;
     }
     double r[]     = {0,0,0};
-    Bool_t  isSecondary=gRandom->Rndm()<0.5;
+    Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
     // isSecondary=kFALSE;
     if (isSecondary){
-        r[0]=2*(gRandom->Rndm()-0.5)*smearR;
-        r[1]=2*(gRandom->Rndm()-0.5)*smearR;
+        double rStart = gRandom->Rndm()*smearR;
+        double PhiSt = gRandom->Rndm()*2*TMath::Pi();
+        r[0] = rStart*cos(PhiSt);
+        r[1] = rStart*sin(PhiSt);
+        // r[0]=2*(gRandom->Rndm()-0.5)*smearR;
+        // r[1]=2*(gRandom->Rndm()-0.5)*smearR;
         r[2]=2*(gRandom->Rndm()-0.5)*smearZ;
+        int t = 0;
     }
     double pt      = kMinPt/(kMax1Pt*kMinPt+gRandom->Rndm());
-    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*kFlatPtMax;
+    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*(kFlatPtMax-kFlatPtMin)+kFlatPtMin;
     double phi     = gRandom->Rndm()*TMath::TwoPi();
     double theta = (gRandom->Rndm()-0.5)*3;
     double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
@@ -132,6 +140,123 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
                   "pidCode="<<pidCode<<
                   "pdgCode="<<pdgCode<<
                   "charge="<<charge<<
+                  "phi="<<phi<<
+                  "theta="<<theta<<
+                  "part.=" << &particle0 <<
+                  "partFull.=" << &particle <<
+                  "\n";
+      tree=  ((*pcstream) << "fastPart").GetTree();
+    }
+  }
+  delete pcstream;
+  timer.Print();
+}
+
+
+/// test for looper development with continous tracking - ALICE TPC gas cylinder without ITS - emulation of the gas detectors
+/// \param nParticles
+/// \param dumpStream
+void testNDGAr(Int_t nParticles, bool dumpStream=1){
+
+  const Int_t   nLayerTPC=250;
+  const Int_t   nPoints=nLayerTPC*100;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
+  const Float_t kMinPt=0.01;
+  const Float_t kMax1Pt=1./20.;
+  const Float_t kFlatPtMin=0.01;
+  const Float_t kFlatPtMax=20;
+  const Float_t kFlatPtFraction=0.7;
+  const Float_t kSecondaryFraction = 0.5;
+  const Float_t smearR=200;
+  const Float_t smearZ=200;
+  const Float_t xx0=8.37758e-04; //1/X0 cm^-1 for ArCH4 at 10 atm
+  const Float_t xrho=0.016770000; //rho g/cm^3 for ArCH4 at 10 atm
+  const Float_t kNominalFraction=0;     // fraction of nominal properties
+  const Float_t kMaterialScaling=10;      // material random scaling to
+  const Float_t kMinMaterialScaling=0.1;      // material random scaling to
+  const Float_t kMaxResol=0.5;            // point resolution scan max resolution
+  const Float_t kMinResol=0.01;           //  point resolution scan min resolution
+  const Float_t kDefResol=0.1;           //  point resolution scan min resolution
+
+  TStopwatch timer;
+  timer.Start();
+  fastGeometry geom(nLayerTPC+1);
+  geom.fBz=5;
+
+
+  float resol[2]={0.001,0.001};
+  resol[0]=0.1;
+  resol[1]=0.1;
+  geom.setLayerRadiusPower(0,nLayerTPC,1,nLayerTPC,1.0,xx0,xrho,resol);
+
+  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticle.root","recreate");
+  TTree * tree = 0;
+  for (Int_t i=0; i<nParticles; i++){
+    fastParticle particle(nLayerTPC+1);
+    particle.fAddMSsmearing=true;
+    particle.fAddPadsmearing=true;
+    particle.fUseMCInfo=true;
+    particle.fgStreamer=pcstream;
+    particle.gid=i;
+    // generate scan detector properties
+    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*(kMaterialScaling-kMinMaterialScaling)+kMinMaterialScaling);
+    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: (gRandom->Rndm()*(kMaxResol-kMinResol)+kMinResol);
+    for (size_t iLayer=0; iLayer<geom.fLayerX0.size();iLayer++) {
+      geom.fLayerX0[iLayer] = xx0 * matScaling;
+      geom.fLayerRho[iLayer] = xrho * matScaling;
+      geom.fLayerResolRPhi[iLayer] = resolScan;
+      geom.fLayerResolZ[iLayer] = resolScan;
+    }
+    double r[]     = {0,0,0};
+    Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
+    // isSecondary=kFALSE;
+    if (isSecondary){
+        double rStart = gRandom->Rndm()*smearR;
+        double PhiSt = gRandom->Rndm()*2*TMath::Pi();
+        r[0] = rStart*cos(PhiSt);
+        r[1] = rStart*sin(PhiSt);
+        // r[0]=2*(gRandom->Rndm()-0.5)*smearR;
+        // r[1]=2*(gRandom->Rndm()-0.5)*smearR;
+        r[2]=2*(gRandom->Rndm()-0.5)*smearZ;
+        int t = 0;
+    }
+    double pt      = kMinPt/(kMax1Pt*kMinPt+gRandom->Rndm());
+    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*(kFlatPtMax-kFlatPtMin)+kFlatPtMin;
+    double phi     = gRandom->Rndm()*TMath::TwoPi();
+    double theta = (gRandom->Rndm()-0.5)*3;
+    double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
+    int    pidCode=int(gRandom->Rndm()*5);          //avoid unrecognized pdg codes
+    short  charge  = (gRandom->Rndm()<0.5) ? -1:1;
+    int64_t   pdgCode = AliPID::ParticleCode(pidCode)*charge;
+    if (gRandom->Rndm()<kRandomPDGFraction) {
+      pdgCode=0;
+      pidCode=-1;
+    }
+    Bool_t  hasDecay=(gRandom->Rndm()<kDecayFraction);
+    Float_t decayLength= hasDecay ?gRandom->Rndm()*geom.fLayerRadius[geom.fLayerRadius.size()-1]:0;
+    particle.fDecayLength=decayLength;
+    particle.simulateParticle(geom, r,p,pdgCode,nPoints,nPoints);
+    particle.reconstructParticle(geom,pdgCode,nPoints);
+    fastParticle particle0 = particle;
+    particle.reconstructParticleFull(geom,pdgCode,nPoints);
+    particle.reconstructParticleFullOut(geom,pdgCode,nPoints);
+    particle.refitParticle();
+    //particle.reconstructParticleRotate0(geom,pdgCode,nPoints);
+    //particle.simulateParticle(geom, r,p,211, 250,161);
+    //particle.reconstructParticle(geom,211,160);
+    if (dumpStream==kFALSE) continue;
+    if (tree) tree->Fill();
+    else {
+      (*pcstream) << "fastPart" <<
+                  "i=" << i <<
+                  "densScaling="<<matScaling<<
+                  "geom.="<<&geom<<
+                  "hasDecay="<<hasDecay<<
+                  "isSecondary="<<isSecondary<<
+                  "pidCode="<<pidCode<<
+                  "pdgCode="<<pdgCode<<
+                  "charge="<<charge<<
+                  "phi="<<phi<<
+                  "theta="<<theta<<
                   "part.=" << &particle0 <<
                   "partFull.=" << &particle <<
                   "\n";
@@ -389,6 +514,10 @@ void initTreeFast(const char * inputList="fastParticle.list"){
   treeUnit0->SetAlias("dEdxOutIn","AliExternalTrackParam::BetheBlochSolid(0+paramStepRK.P()/mass)/AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass)");
   treeUnit0->SetAlias("dEdxIn","AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass+0)");
   treeUnit0->SetAlias("dEdxOut","AliExternalTrackParam::BetheBlochSolid(paramRK.P()/mass+0)");
+
+  treeFast->SetAlias("gxMCst","part.fParamMC[0].fX*cos(part.fParamMC[0].fAlpha)-part.fParamMC[0].fP[0]*sin(part.fParamMC[0].fAlpha)");
+  treeFast->SetAlias("gyMCst","part.fParamMC[0].fX*sin(part.fParamMC[0].fAlpha)+part.fParamMC[0].fP[0]*cos(part.fParamMC[0].fAlpha)");
+  treeFast->SetAlias("gzMCst","part.fParamMC[0].fP[1]");
 
 }
 

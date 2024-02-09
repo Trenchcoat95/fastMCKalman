@@ -205,6 +205,7 @@ def loadRDFSample(input="fastParticle.list",verbosity=0, doTest=True, nThreads=0
                                 "densScaling","isSecondary","hasDecay","LArm.*","Length.*","ptMCIn0","massMC"],
                                ["part.*Para.*","geom.*","part.*",".*InRot.*" ],[".*"],[".*AliExternal.*","Long64.*","Long.*"], verbose=verbosity)
 
+    print(varList)
 
     if doTest:
         rdfTest=rdf1.Range(0,1000)

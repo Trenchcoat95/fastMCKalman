@@ -288,6 +288,7 @@ ROOT::RVec<float>  paramP(ROOT::RVec<AliExternalTrackParam4D>& track, int param)
 ROOT::RVec<float>  LArm(ROOT::RVec<AliExternalTrackParam4D>& track, int FirstIndex) {
   ROOT::RVec<float> LArm(track.size());
   if(FirstIndex<0) FirstIndex=0;
+  if(FirstIndex>=track.size()) FirstIndex=track.size()-1;
   for (size_t i = 0; i < track.size(); i++) {
     Double_t xyzMC0[3];
     Double_t xyzi[3];
@@ -319,6 +320,7 @@ ROOT::RVec<float>  LengthOut(ROOT::RVec<AliExternalTrackParam4D>& track, int Fir
 
 ROOT::RVec<float>  LengthIn(ROOT::RVec<AliExternalTrackParam4D>& track, int FirstIndex) {
   ROOT::RVec<float> Length(track.size());
+  if(FirstIndex>=track.size()) FirstIndex=track.size()-1;
   for (size_t i = 0; i < track.size(); i++) {
     float Lengthtot = 0;
     if(i<size_t(FirstIndex)){ 

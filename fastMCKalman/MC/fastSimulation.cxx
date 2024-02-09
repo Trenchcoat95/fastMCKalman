@@ -132,8 +132,8 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   Double_t dPhic = 2*asin(sinphic);
   Double_t darchxy = dir*abs(dPhic*rc);
   fP1 += darchxy*fP[3];
-  fC00+=(sy*darchxy)*(sy*darchxy);
-  fC11+=(sz*darchxy)*(sz*darchxy);
+  // fC00+=(sy*darchxy)*(sy*darchxy);
+  // fC11+=(sz*darchxy)*(sz*darchxy);
 
 
   //Flip parameters 2/4
