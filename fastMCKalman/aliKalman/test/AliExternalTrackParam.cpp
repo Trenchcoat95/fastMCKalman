@@ -847,6 +847,23 @@ Double_t AliExternalTrackParam::BetheBlochGas(Double_t bg) {
   return BetheBlochGeant(bg,rho,x0,x1,mI,mZA);
 }
 
+Double_t AliExternalTrackParam::BetheBlochArgon(Double_t bg) {
+  //------------------------------------------------------------------
+  // This is an approximation of the Bethe-Bloch formula, 
+  // reasonable for Argon-based gas materials.
+  // All the parameters are taken from https://doi.org/10.1016/0092-640X(84)90002-0
+  // The returned value is in [GeV/(g/cm^2)]
+  //------------------------------------------------------------------
+
+  const Double_t rho = 1.662e-3;
+  const Double_t x0  = 1.7635;
+  const Double_t x1  = 4.4855;
+  const Double_t mI  = 188.e-9;
+  const Double_t mZA = 0.45059;
+
+  return BetheBlochGeant(bg,rho,x0,x1,mI,mZA);
+}
+
 Bool_t AliExternalTrackParam::Rotate(Double_t alpha) {
   //------------------------------------------------------------------
   // Transform this track to the local coord. system rotated

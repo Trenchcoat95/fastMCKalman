@@ -187,6 +187,7 @@ class AliExternalTrackParam: public AliVTrack {
     
   static Double_t BetheBlochSolid(Double_t bg);
   static Double_t BetheBlochGas(Double_t bg);
+  static Double_t BetheBlochArgon(Double_t bg);
 
   Double_t GetPredictedChi2(const Double_t p[2],const Double_t cov[3]) const;
 
