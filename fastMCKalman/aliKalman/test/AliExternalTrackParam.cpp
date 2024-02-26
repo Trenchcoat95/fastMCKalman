@@ -323,7 +323,7 @@ void AliExternalTrackParam::Set(Double_t xyz[3],Double_t pxpypz[3],
   //
   const double kSafe = 1e-5;
   Double_t radPos2 = xyz[0]*xyz[0]+xyz[1]*xyz[1];  
-  Double_t radMax  = 45.; // approximately ITS outer radius
+  Double_t radMax  = 0.; // approximately ITS outer radius
   if (radPos2 < radMax*radMax) { // inside the ITS     
      fAlpha = TMath::ATan2(pxpypz[1],pxpypz[0]);
   } else { // outside the ITS

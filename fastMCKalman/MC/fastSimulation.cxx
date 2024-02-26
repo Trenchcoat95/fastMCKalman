@@ -539,7 +539,7 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
       if (!isMC) return kFALSE;
     }
     Double_t cP4MS = sqrt((1+(p3New*p3New))/(1+(fP[3])*(fP[3]))); ////keep total momentum constant and modify q/pt accordingly (this factor is cos(lambda)/cos(lambda_new))
-    double p4RelSmear=gRandom->Gaus(0,sigmadPRel);
+    double p4RelSmear=gRandom->Landau(0,sigmadPRel);
     fP[2]=p2New;
     fP[3]=p3New;
     fP[4]*=cP4MS;

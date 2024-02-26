@@ -1,8 +1,8 @@
 /*
     gSystem->AddIncludePath("-I\"$fastMCKalman/fastMCKalman/fastMCKalman/aliKalman/test/\"")
       gSystem->Load("$fastMCKalman/fastMCKalman/aliKalman/test/AliExternalTrackParam.so");
-   .L $fastMCKalman/fastMCKalman/MC/fastSimulation.cxx+g
-    .L $fastMCKalman/fastMCKalman/MC/fastSimulationTest.C+g
+   .L $fastMCKalman/fastMCKalman/MC/fastSimulation.cxx++g
+    .L $fastMCKalman/fastMCKalman/MC/fastSimulationTest.C++g
     AliPDG::AddParticlesToPdgDataBase();
     testTPC(10000,kTRUE);            //setup for the looper development
     testAlice(10000,kTRUE);          // ALICE setup
@@ -95,7 +95,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
     Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
     // isSecondary=kFALSE;
     if (isSecondary){
-        double rStart = gRandom->Rndm()*smearR;
+        double rStart = sqrt(gRandom->Rndm())*smearR;
         double PhiSt = gRandom->Rndm()*2*TMath::Pi();
         r[0] = rStart*cos(PhiSt);
         r[1] = rStart*sin(PhiSt);
@@ -141,6 +141,9 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
                   "pdgCode="<<pdgCode<<
                   "charge="<<charge<<
                   "phi="<<phi<<
+                  "r0=" << r[0] <<
+                  "r1=" << r[1] <<
+                  "r2=" << r[2] <<
                   "theta="<<theta<<
                   "part.=" << &particle0 <<
                   "partFull.=" << &particle <<
@@ -163,19 +166,19 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
   const Float_t kMinPt=0.01;
   const Float_t kMax1Pt=1./20.;
   const Float_t kFlatPtMin=0.01;
-  const Float_t kFlatPtMax=20;
-  const Float_t kFlatPtFraction=0.7;
-  const Float_t kSecondaryFraction = 0.5;
+  const Float_t kFlatPtMax=5;
+  const Float_t kFlatPtFraction=1;
+  const Float_t kSecondaryFraction = 1;
   const Float_t smearR=200;
   const Float_t smearZ=200;
   const Float_t xx0=8.37758e-04; //1/X0 cm^-1 for ArCH4 at 10 atm
   const Float_t xrho=0.016770000; //rho g/cm^3 for ArCH4 at 10 atm
   const Float_t kNominalFraction=0;     // fraction of nominal properties
-  const Float_t kMaterialScaling=10;      // material random scaling to
-  const Float_t kMinMaterialScaling=0.1;      // material random scaling to
-  const Float_t kMaxResol=0.5;            // point resolution scan max resolution
-  const Float_t kMinResol=0.01;           //  point resolution scan min resolution
-  const Float_t kDefResol=0.1;           //  point resolution scan min resolution
+  const Float_t kMaterialScaling=1;      // material random scaling to
+  const Float_t kMinMaterialScaling=1;      // material random scaling to
+  const Float_t kMaxResol=0.1;            // point resolution scan max resolution
+  const Float_t kMinResol=0.1;           //  point resolution scan min resolution
+  const Float_t kDefResol=0.3;           //  point resolution scan min resolution
 
   TStopwatch timer;
   timer.Start();
@@ -188,7 +191,7 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
   resol[1]=0.1;
   geom.setLayerRadiusPower(0,nLayerTPC,1,nLayerTPC,1.0,xx0,xrho,resol);
 
-  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticle.root","recreate");
+  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticleGAr.root","recreate");
   TTree * tree = 0;
   for (Int_t i=0; i<nParticles; i++){
     fastParticle particle(nLayerTPC+1);
@@ -210,7 +213,7 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
     Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
     // isSecondary=kFALSE;
     if (isSecondary){
-        double rStart = gRandom->Rndm()*smearR;
+        double rStart = sqrt(gRandom->Rndm())*smearR;
         double PhiSt = gRandom->Rndm()*2*TMath::Pi();
         r[0] = rStart*cos(PhiSt);
         r[1] = rStart*sin(PhiSt);
@@ -222,11 +225,17 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
     double pt      = kMinPt/(kMax1Pt*kMinPt+gRandom->Rndm());
     if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*(kFlatPtMax-kFlatPtMin)+kFlatPtMin;
     double phi     = gRandom->Rndm()*TMath::TwoPi();
+    if((phi-TMath::Pi())<0.01 || (phi-TMath::TwoPi())<0.01 || (phi)<0.01) phi+= (0.02*gRandom->Rndm());
     double theta = (gRandom->Rndm()-0.5)*3;
     double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
-    int    pidCode=int(gRandom->Rndm()*5);          //avoid unrecognized pdg codes
+    float pidFrac = gRandom->Rndm()*3;
+    int    pidCode=0;          //avoid unrecognized pdg codes
+    if(pidFrac<1) pidCode = 1;
+    else if (pidFrac<2 && pidFrac>=1) pidCode=2;
+    else if (pidFrac>=2) pidCode=4;
     short  charge  = (gRandom->Rndm()<0.5) ? -1:1;
-    int64_t   pdgCode = AliPID::ParticleCode(pidCode)*charge;
+    int64_t   pdgCode = AliPID::ParticleCode(pidCode);
+    if(pidCode==2) pdgCode*=charge;
     if (gRandom->Rndm()<kRandomPDGFraction) {
       pdgCode=0;
       pidCode=-1;
@@ -240,6 +249,32 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
     particle.reconstructParticleFull(geom,pdgCode,nPoints);
     particle.reconstructParticleFullOut(geom,pdgCode,nPoints);
     particle.refitParticle();
+    float Length = 0;
+    bool jump = 0;
+    double xyz_saved[3];
+    for(size_t p = 1; p<particle.fParamIn.size();p++){
+      double xyz_now[3];
+      double xyz_next[3];
+      particle.fParamMC[p-1].GetXYZ(xyz_now);
+      particle.fParamMC[p].GetXYZ(xyz_next);
+      if(xyz_next[0]==0 || xyz_next[1] == 0 || xyz_next[2]==0){
+        if(!jump) for(size_t k = 0;k<3;k++) xyz_saved[k] = xyz_now[k];
+        jump = 1;
+      }
+      else{
+        if(jump){
+          Length+=sqrt((xyz_next[0]-xyz_saved[0])*(xyz_next[0]-xyz_saved[0])+
+                      (xyz_next[1]-xyz_saved[1])*(xyz_next[1]-xyz_saved[1])+
+                      (xyz_next[2]-xyz_saved[2])*(xyz_next[2]-xyz_saved[2]));
+          jump = 0;
+          for(size_t k = 0;k<3;k++) xyz_saved[k] = 0;
+        }else{
+          Length+=sqrt((xyz_next[0]-xyz_now[0])*(xyz_next[0]-xyz_now[0])+
+                      (xyz_next[1]-xyz_now[1])*(xyz_next[1]-xyz_now[1])+
+                      (xyz_next[2]-xyz_now[2])*(xyz_next[2]-xyz_now[2]));
+        }
+      }
+    }
     //particle.reconstructParticleRotate0(geom,pdgCode,nPoints);
     //particle.simulateParticle(geom, r,p,211, 250,161);
     //particle.reconstructParticle(geom,211,160);
@@ -257,6 +292,10 @@ void testNDGAr(Int_t nParticles, bool dumpStream=1){
                   "charge="<<charge<<
                   "phi="<<phi<<
                   "theta="<<theta<<
+                  "Length="<<Length<<
+                  "r0=" << r[0] <<
+                  "r1=" << r[1] <<
+                  "r2=" << r[2] <<
                   "part.=" << &particle0 <<
                   "partFull.=" << &particle <<
                   "\n";
