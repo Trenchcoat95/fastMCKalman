@@ -125,6 +125,32 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
     particle.reconstructParticleFull(geom,pdgCode,nPoints);
     particle.reconstructParticleFullOut(geom,pdgCode,nPoints);
     particle.refitParticle();
+    float Length = 0;
+    bool jump = 0;
+    double xyz_saved[3];
+    for(size_t p = 1; p<particle.fParamIn.size();p++){
+      double xyz_now[3];
+      double xyz_next[3];
+      particle.fParamMC[p-1].GetXYZ(xyz_now);
+      particle.fParamMC[p].GetXYZ(xyz_next);
+      if(xyz_next[0]==0 || xyz_next[1] == 0 || xyz_next[2]==0){
+        if(!jump) for(size_t k = 0;k<3;k++) xyz_saved[k] = xyz_now[k];
+        jump = 1;
+      }
+      else{
+        if(jump){
+          Length+=sqrt((xyz_next[0]-xyz_saved[0])*(xyz_next[0]-xyz_saved[0])+
+                      (xyz_next[1]-xyz_saved[1])*(xyz_next[1]-xyz_saved[1])+
+                      (xyz_next[2]-xyz_saved[2])*(xyz_next[2]-xyz_saved[2]));
+          jump = 0;
+          for(size_t k = 0;k<3;k++) xyz_saved[k] = 0;
+        }else{
+          Length+=sqrt((xyz_next[0]-xyz_now[0])*(xyz_next[0]-xyz_now[0])+
+                      (xyz_next[1]-xyz_now[1])*(xyz_next[1]-xyz_now[1])+
+                      (xyz_next[2]-xyz_now[2])*(xyz_next[2]-xyz_now[2]));
+        }
+      }
+    }
     //particle.reconstructParticleRotate0(geom,pdgCode,nPoints);
     //particle.simulateParticle(geom, r,p,211, 250,161);
     //particle.reconstructParticle(geom,211,160);
@@ -145,6 +171,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
                   "r1=" << r[1] <<
                   "r2=" << r[2] <<
                   "theta="<<theta<<
+                  "Length="<<Length<<
                   "part.=" << &particle0 <<
                   "partFull.=" << &particle <<
                   "\n";

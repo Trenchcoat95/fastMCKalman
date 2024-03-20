@@ -1153,7 +1153,7 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
   fMaxLayer=0;
   const float kMaxSnp=0.90;
   const float kMaxLoss=0.5;
-  const float kMaxZ=300;
+  const float kMaxZ=250;
    double covar[21]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
    float_t mass=0,sign=1;
   fPdgCodeMC=pdgCode;
