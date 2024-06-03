@@ -511,7 +511,7 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
     cP4 = pOld/pOut;                               /// TODO we use momentum loss not need to use "Ruben E loss approximation"
     //if (TMath::Abs(fP4*cP4)>100.) return kFALSE; //Do not track below 10 MeV/c -disable controlled by the BG cut
     // Approximate energy loss fluctuation (M.Ivanov)
-    const Double_t knst=0.07; // TODO To be tuned.
+    const Double_t knst=0.00031622777; // TODO To be tuned.
     //Double_t sigmadE=knst*TMath::Abs(dE);                 /// TODO remove that part if momentm smearing working well
     //cC44 += ((sigmadE*Ein/p2*fP4)*(sigmadE*Ein/p2*fP4));
     //

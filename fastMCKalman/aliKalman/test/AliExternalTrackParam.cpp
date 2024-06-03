@@ -640,7 +640,7 @@ Bool_t AliExternalTrackParam::CorrectForMeanMaterialdEdx
 
 
      // Approximate energy loss fluctuation (M.Ivanov)
-     const Double_t knst=0.07; // To be tuned.  
+     const Double_t knst=0.00031622777; // To be tuned.  
      Double_t sigmadE=knst*TMath::Sqrt(TMath::Abs(dE)); 
      cC44 += ((sigmadE*e/p2*fP4)*(sigmadE*e/p2*fP4)); 
  
