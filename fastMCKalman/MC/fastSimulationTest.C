@@ -41,7 +41,7 @@ void testDummy(){
 /// test for looper development with continous tracking - ALICE TPC gas cylinder without ITS - emulation of the gas detectors
 /// \param nParticles
 /// \param dumpStream
-void testTPC(Int_t nParticles, bool dumpStream=1){
+void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool dumpStream=1){
 
   const Int_t   nLayerTPC=250;
   const Int_t   nPoints=nLayerTPC*4;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
@@ -70,7 +70,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
   resol[1]=0.1;
   geom.setLayerRadiusPower(0,nLayerTPC,1,nLayerTPC,1.0,xx0,xrho,resol);
 
-  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticle.root","recreate");
+  TTreeSRedirector *pcstream = new TTreeSRedirector(file_name.c_str(),"recreate");
   TTree * tree = 0;
   for (Int_t i=0; i<nParticles; i++){
     fastParticle particle(nLayerTPC+1);
@@ -145,7 +145,7 @@ void testTPC(Int_t nParticles, bool dumpStream=1){
 /// testAlice configuration ITS+TPC with material budget as in the Run1/2
 /// \param nParticles
 /// \param dumpStream
-void testAlice(Int_t nParticles, bool dumpStream){
+void testAlice(Int_t nParticles, std::string file_name="fastParticleALICE.root", bool dumpStream){
   const Float_t smearR=10;
   const Float_t smearZ=10;
   const Float_t resolY=0.1;
@@ -177,7 +177,7 @@ void testAlice(Int_t nParticles, bool dumpStream){
   //geom.setLayerRadiusPower(6,nLayerTPC,89,260,1.0,0.000025,0.0009,resol);
   geom.setLayerRadiusPower(6,nLayerTPC,89,260,1.0,xx0,xrho,resol);
   //
-  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticleALICE.root","recreate");
+  TTreeSRedirector *pcstream = new TTreeSRedirector(file_name.c_str(),"recreate");
   particle.fgStreamer=pcstream;
   TTree * tree = 0;
   for (Int_t i=0; i<nParticles; i++){
@@ -230,7 +230,7 @@ void testAlice(Int_t nParticles, bool dumpStream){
 /// testAlice 3 configuration as proposed in https://github.com/preghenella/DelphesO2/blob/a058f94f6cb887edcf725fd991d16ca5f7b76e0b/src/lutWrite.werner.cc
 /// \param nParticles
 /// \param dumpStream
-void testAlice3Werner(Int_t nParticles, bool dumpStream){
+void testAlice3Werner(Int_t nParticles, std::string file_name="fastParticleALICE3.root", bool dumpStream){
   // simulation setup parameters
   const Float_t smearR=10;
   const Float_t smearZ=10;
@@ -277,7 +277,7 @@ void testAlice3Werner(Int_t nParticles, bool dumpStream){
   //
   TStopwatch timer;
   timer.Start();
-  TTreeSRedirector *pcstream = new TTreeSRedirector("fastParticle.root","recreate");
+  TTreeSRedirector *pcstream = new TTreeSRedirector(file_name.c_str(),"recreate");
   TTree * tree = 0;
   fastGeometry geom= fastGeometry(nLayersAll);
   geom.fBz=bz;
@@ -341,30 +341,6 @@ void testAlice3Werner(Int_t nParticles, bool dumpStream){
 
 void setAliases(TTree & tree){
   fastParticle::setAliases(tree);
-//  tree.SetAlias("gxIn","cos(part.fParamIn[].fAlpha)*part.fParamIn[].fX");
-//  tree.SetAlias("gyIn","sin(part.fParamIn[].fAlpha)*part.fParamIn[].fX");
-//  tree.SetAlias("gxMC","cos(part.fParamMC[].fAlpha)*part.fParamMC[].fX");
-//  tree.SetAlias("gyMC","sin(part.fParamMC[].fAlpha)*part.fParamMC[].fX");
-//  tree.SetAlias("gzMC","part.fParamMC[].fP[1]");
-//  tree.SetAlias("rMC","part.fParamMC[].fX");
-//  tree.SetAlias("ptMC","part.fParamMC[0].fData.Pt()");
-//  tree.SetAlias("pMC","part.fParamMC[0].fData.P()");
-//  tree.SetAlias("ptRec","part.fParamIn[0].fData.Pt()");
-//  //
-//  tree.SetAlias("layer","Iteration$");
-//  tree.SetAlias("c0MC","sqrt(part.fParamMC[].fC[0])");
-//  tree.SetAlias("c2MC","sqrt(part.fParamMC[].fC[2])");
-//  tree.SetAlias("c14MC","sqrt(part.fParamMC[].fC[14])");
-//  tree.SetAlias("c0In","sqrt(part.fParamIn[].fC[0])");
-//  tree.SetAlias("c2In","sqrt(part.fParamIn[].fC[2])");
-//  tree.SetAlias("c0InRot","sqrt(part.fParamInRot[].fC[0])");
-//  tree.SetAlias("c2InRot","sqrt(part.fParamInRot[].fC[2])");
-//  tree.SetAlias("dEdxExp","AliExternalTrackParam::BetheBlochAleph(pMC/AliPID::ParticleMass(pidCode))");
-//  tree.SetAlias("dEdxExpSolid","AliExternalTrackParam::BetheBlochSolid(pMC/AliPID::ParticleMass(pidCode))");
-//  tree.SetAlias("dEdxExpSolidL","AliExternalTrackParam::BetheBlochSolid(part.fParamMC[].fData.P()/AliPID::ParticleMass(pidCode))");
-//  tree.SetAlias("dEdxExpSolidL1","AliExternalTrackParam::BetheBlochSolid(part.fParamMC[Iteration$-1].fData.P()/AliPID::ParticleMass(pidCode))");
-//  tree.SetAlias("elossTPCIn","(part.fParamIn[159].fData.GetP()-part.fParamIn[7].fData.GetP())/part.fParamMC[1].fData.GetP()");
-//  tree.SetAlias("elossTPCMC","(part.fParamMC[159].fData.GetP()-part.fParamMC[7].fData.GetP())/part.fParamMC[1].fData.GetP()");
 }
 
 void initTreeFast(const char * inputList="fastParticle.list"){
@@ -380,9 +356,7 @@ void initTreeFast(const char * inputList="fastParticle.list"){
   treeSeed->BuildIndex("gid");
   treeFast->BuildIndex("gid");
   treeSeed->AddFriend(treeFast,"F");
-
-  //AliDrawStyle::SetDefaults();
-  //AliDrawStyle::ApplyStyle("figTemplate");
+  
   gStyle->SetOptTitle(1);
   setAliases(*treeFast);
   //
@@ -401,33 +375,3 @@ void drawDisplay(){
   gPad->SaveAs("fig/gygzIn.png");
 }
 
-
-/*
-
-void testDataFrame(){
-  RDataFrame d(100); // a RDF that will generate 100 entries (currently empty)
-  int x = -1;
-  auto d_with_columns = d.Define("x", [&x] { return ++x; })
-                       .Define("xx", [&x] { return x*x; });
-  d_with_columns.Snapshot("myNewTree", "newfile.root");
-  //
-  RDataFrame df("particles", "particle.root");
-  //auto zMean = d.Define("z", "sqrt(x*x + y*y)").Mean("z");
-}
-
-*/
-
-/*
-
-void checkMaterialAliRoot(){
-  Double_t x0[3]={0,0,0};
-  Double_t x1[3]={6,0,0};
-  Double_t param[10];
-  AliTrackerBase::MeanMaterialBudget(x0,x1,param);
-  Double_t xrho=param[0]*param[4], xx0=param[1];
-  // root [34] xrho
-  // (Double_t)4.66295523219595331e-01
-  // root [35] xx0
-  // (Double_t)1.32765905087294800e-02
-
-}*/
