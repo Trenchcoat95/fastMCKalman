@@ -39,20 +39,20 @@ AliExternalTrackParam4D::AliExternalTrackParam4D(const AliExternalTrackParam &t,
 
 AliExternalTrackParam4D::~AliExternalTrackParam4D(){};
 
-/// Estimate shape size for particle - shape is determined by the diffusion, angles and deposited charge
-/// \param sigma           -  diffusion sigma ~ induction gap - if as in the TPC
-/// \param width           -  pixel width
-/// \param threshold       -  threhsold in units of MIP
+/// @brief Estimate shape size for particle - shape is determined by the diffusion, angles and deposited charge
+/// @param sigma           -  diffusion sigma ~ induction gap - if as in the TPC
+/// @param width           -  pixel width
+/// @param threshold       -  threhsold in units of MIP
 /// \return                - mean number of pixels above threshold
 Double_t AliExternalTrackParam4D::GetOverThr(Float_t sigma, Float_t width, Float_t threshold){
   return 0; /// TODO add implemetation
 }
 
 
-/// propagate to radius and update Track length and time
-/// \param xk
-/// \param b
-/// \param timeDir
+/// @brief propagate to radius and update Track length and time
+/// @param xk
+/// @param b
+/// @param timeDir
 /// \return
 Bool_t AliExternalTrackParam4D::PropagateTo(Double_t xk, Double_t b, Int_t timeDir){
   static const Double_t kcc = 2.99792458e-2;
@@ -76,6 +76,12 @@ Bool_t AliExternalTrackParam4D::PropagateTo(Double_t xk, Double_t b, Int_t timeD
   return status;
 }
 
+/// @brief Impose a "flip" on the parameter vector by a rotation defined by a diagonal matrix with diagonal elements: R = {1,1,-1,-1,-1}
+/// @param b 
+/// @param dir 
+/// @param sy 
+/// @param sz 
+/// @return 
 Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Double_t  sy, Double_t sz)
 {
    //----------------------------------------------------------------
@@ -158,7 +164,7 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   return dArch; 
 
 }
-///  Clone of the original method removing one protection - here we disable  TMath::Abs(cosT)>kAlmost1 check (lAlmost1 was very restrictive)
+/// @brief Clone of the original method removing one protection - here we disable  TMath::Abs(cosT)>kAlmost1 check (lAlmost1 was very restrictive)
 ///  // This method has 3 modes of behaviour
 ///  // 1) xyz[3] array is provided but alpSect pointer is 0: calculate the position of track intersection
 ///  //    with circle of radius xr and fill it in xyz array
@@ -166,10 +172,10 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
 ///  //    Note that in this case xr is NOT the radius but the local coordinate.
 ///  //    If the xyz array is provided, it will be filled by track lab coordinates at local X in this sector
 ///  // 3) Neither alpSect nor xyz pointers are provided: just check if the track reaches radius xr
-/// \param xr
-/// \param bz
-/// \param xyz
-/// \param alpSect
+/// @param xr
+/// @param bz
+/// @param xyz
+/// @param alpSect
 /// \return
 Bool_t AliExternalTrackParam4D::GetXYZatR(Double_t xr,Double_t bz, Double_t *xyz, Double_t* alpSect) const {
   double crv = GetC(bz);
@@ -308,15 +314,15 @@ Int_t AliExternalTrackParam4D::GetDirectionSign(){
   return (dir>0)? 1:-1;
 }
 
-/// Runge-Kuta energy loss correction  - https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
+/// @brief Runge-Kuta energy loss correction  - https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
 /// WARNING - we use strange ALICE convention signing Z==2 particle with negative mass - TODO - replace it with explicit Q
-/// \param xOverX0        - X/X0, the thickness in units of the radiation length.
-/// \param xTimesRho      - is the product length*density (g/cm^2).
+/// @param xOverX0        - X/X0, the thickness in units of the radiation length.
+/// @param xTimesRho      - is the product length*density (g/cm^2).
 //                        - It should be passed as negative when propagating tracks
 //                        - from the interaction point to the outside of the central barrel.
-/// \param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
-/// \param f              - dEdx formula
-/// \param stepFraction   - step fraction  - above some limits RungeKuta instead of the Euler Method used
+/// @param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
+/// @param f              - dEdx formula
+/// @param stepFraction   - step fraction  - above some limits RungeKuta instead of the Euler Method used
 /// \return  CorrectForMeanMaterial status  (kFalse - Failed, kTrue - Success)
 Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialRK(Double_t xOverX0, Double_t xTimesRho, Double_t mass, Float_t stepFraction, Double_t (*f)(Double_t)){
   //  Runge Kuttta integral p(x)
@@ -421,16 +427,16 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialRK(Double_t xOverX0, Doubl
 
 
 
-/// Correct for mean material
+/// @brief Correct for mean material
 /// WARNING - we use strange ALICE convention signing Z==2 particle with negative mass - TODO - replace it with explicit Q
-/// \param xOverX0        - X/X0, the thickness in units of the radiation length.
-/// \param xTimesRho      - is the product length*density (g/cm^2).
+/// @param xOverX0        - X/X0, the thickness in units of the radiation length.
+/// @param xTimesRho      - is the product length*density (g/cm^2).
 //                        - It should be passed as negative when propagating tracks
 //                        - from the interaction point to the outside of the central barrel.
-/// \param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
-/// \param mcSwitch    - can be used for the simulation - bit 2 = addSmearing, bit 1 = stop on covariance
-/// \param f              - dEdx formula
-/// \param stepFraction   - step fraction  - above some limits RungeKuta instead of the Euler Method used
+/// @param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
+/// @param mcSwitch    - can be used for the simulation - bit 2 = addSmearing, bit 1 = stop on covariance
+/// @param f              - dEdx formula
+/// @param stepFraction   - step fraction  - above some limits RungeKuta instead of the Euler Method used
 /// \return  CorrectForMeanMaterial status  (kFalse - Failed, kTrue - Success)
 Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_t xTimesRho, Double_t mass, Float_t stepFraction, int mcSwitch, Double_t (*f)(Double_t)){
   bool addMSSmearing = (mcSwitch&0x2)>0;
@@ -560,15 +566,15 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
 
 
 
-/// Runge-Kuta energy loss correction  - https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
+/// @brief Runge-Kuta energy loss correction  - https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
 /// WARNING - we use strange ALICE convention signing Z==2 particle with negative mass - TODO - replace it with explicit Q
-/// \param xOverX0        - X/X0, the thickness in units of the radiation length.
-/// \param xTimesRho      - is the product length*density (g/cm^2).
+/// @param xOverX0        - X/X0, the thickness in units of the radiation length.
+/// @param xTimesRho      - is the product length*density (g/cm^2).
 //                        - It should be passed as negative when propagating tracks
 //                        - from the interaction point to the outside of the central barrel.
-/// \param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
-/// \param f              - dEdx formula
-/// \param stepFraction   - step fraction
+/// @param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
+/// @param f              - dEdx formula
+/// @param stepFraction   - step fraction
 /// \return
 Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialRKv2(Double_t xOverX0, Double_t xTimesRho,Double_t mass, Float_t stepFraction,  Double_t (*f)(Double_t)){
   //  Runge Kuttta integral p(x)
@@ -685,13 +691,13 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialRKv2(Double_t xOverX0, Dou
 }
 
 
-/// dPdx correction  on top of Euler approximation  - applying correction as in the dPdxCorr to correct - correction fitted in -0.25-0.25
-/// \param xOverX0        - X/X0, the thickness in units of the radiation length.
-/// \param xTimesRho      - is the product length*density (g/cm^2).
+/// @brief dPdx correction  on top of Euler approximation  - applying correction as in the dPdxCorr to correct - correction fitted in -0.25-0.25
+/// @param xOverX0        - X/X0, the thickness in units of the radiation length.
+/// @param xTimesRho      - is the product length*density (g/cm^2).
 //                        - It should be passed as negative when propagating tracks
 //                        - from the interaction point to the outside of the central barrel.
-/// \param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
-/// \param f              - dEdx formula
+/// @param mass           - the mass of this particle (GeV/c^2). Negative mass means charge=2 particle
+/// @param f              - dEdx formula
 /// \return
 Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialT4(Double_t xOverX0, Double_t xTimesRho,Double_t mass,  Double_t (*f)(Double_t)){
   const Double_t kBGStop=0.0040;
@@ -785,10 +791,10 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterialT4(Double_t xOverX0, Doubl
 
 
 
-/// First derivative of the dP/dx - for testing and visualization purposes
-/// \param p       - particle momenta
-/// \param mass    - particle mass
-/// \param fdEdx   - dEdx function pointer
+/// @brief First derivative of the dP/dx - for testing and visualization purposes
+/// @param p       - particle momenta
+/// @param mass    - particle mass
+/// @param fdEdx   - dEdx function pointer
 /// \return        - dP/dx
 Double_t AliExternalTrackParam4D::dPdx(double p, double mass, Double_t (*fundEdx)(Double_t)){
    /// dEdx at very low BG not numerically stable - approximation coul be negative - use mip at that region
@@ -804,10 +810,10 @@ Double_t AliExternalTrackParam4D::dPdx(double p, double mass, Double_t (*fundEdx
     return dPdx;
 };
 
-/// first derivative of the dP/dx- Just for checking
-/// \param p       - particle momenta
-/// \param mass    - particle mass
-/// \param fdEdx   - dEdx function pointer
+/// @brief first derivative of the dP/dx- Just for checking
+/// @param p       - particle momenta
+/// @param mass    - particle mass
+/// @param fdEdx   - dEdx function pointer
 /// \return        - dP/dx
 Double_t AliExternalTrackParam4D::dPdxEuler(double p, double mass, Double_t xTimesRho, Double_t (*fundEdx)(Double_t)) {
   const Double_t kBGStop=0.0040;
@@ -824,10 +830,10 @@ Double_t AliExternalTrackParam4D::dPdxEuler(double p, double mass, Double_t xTim
   return TMath::Sqrt(p2) - p;
 }
 
-/// First derivative of the dP/dx - for testing and visualization purposes
-/// \param p       - particle momenta
-/// \param mass    - particle mass
-/// \param fdEdx   - dEdx function pointer
+/// @brief First derivative of the dP/dx - for testing and visualization purposes
+/// @param p       - particle momenta
+/// @param mass    - particle mass
+/// @param fdEdx   - dEdx function pointer
 /// \return        - dP/dx
 Double_t AliExternalTrackParam4D::dPdxEulerStep(double p, double mass,  Double_t xTimesRho, double step, Double_t (*fundEdx)(Double_t)){
     // const Double_t kBGStop=0.0040; // the position of non relybal BB  depends on the function ... not well defined BetheBlocAleph
@@ -861,10 +867,10 @@ Double_t AliExternalTrackParam4D::dPdxEulerStep(double p, double mass,  Double_t
     return TMath::Min(TMath::Abs(double(sumP)),pOrig)*signCorr;
 };
 
-/// dPdx - based on the first derivative of the dPdx corrected for "saturation" - see fit in the test_AliExternalTrackParam4D.C:fitdPdxScaling - for testing and visualization purposes
-/// \param p       - particle momenta
-/// \param mass    - particle mass
-/// \param fdEdx   - dEdx function pointer
+/// @brief dPdx - based on the first derivative of the dPdx corrected for "saturation" - see fit in the test_AliExternalTrackParam4D.C:fitdPdxScaling - for testing and visualization purposes
+/// @param p       - particle momenta
+/// @param mass    - particle mass
+/// @param fdEdx   - dEdx function pointer
 /// \return        - <dP/dx> *  xTimesRho
 Double_t AliExternalTrackParam4D::dPdxCorrT4(double p, double mass, Double_t xTimesRho, Double_t (*fundEdx)(Double_t)) {
   const Double_t kBGStop = 0.02;
@@ -879,10 +885,10 @@ Double_t AliExternalTrackParam4D::dPdxCorrT4(double p, double mass, Double_t xTi
   return dPdxRelCorr * p;
 }
 
-/// dPdx - based on the first derivative of the dPdx corrected for "saturation" - see fit in the test_AliExternalTrackParam4D.C:fitdPdxScaling - for testing and visualization purposes
-/// \param p       - particle momenta
-/// \param mass    - particle mass
-/// \param fdEdx   - dEdx function pointer
+/// @brief dPdx - based on the first derivative of the dPdx corrected for "saturation" - see fit in the test_AliExternalTrackParam4D.C:fitdPdxScaling - for testing and visualization purposes
+/// @param p       - particle momenta
+/// @param mass    - particle mass
+/// @param fdEdx   - dEdx function pointer
 /// \return        - <dP/dx> *  xTimesRho
 Double_t AliExternalTrackParam4D::dPdxCorrT42(double p, double mass, Double_t xTimesRho, Double_t (*fundEdx)(Double_t)) {
   const Double_t kBGStop = 0.02;
@@ -907,13 +913,13 @@ Double_t AliExternalTrackParam4D::dPdxCorrT42(double p, double mass, Double_t xT
 
 
 
-/// Unit test to check performance  - tracks is corrected in nSteps or using RK in one step - the results will be stored in the streamer for later numberical analysis
-/// \param pcstream       - debug streamer output
-/// \param xOverX0        - X0
-/// \param xTimesRho      - is the product length*density (g/cm^2).
-/// \param mass           - particle mass
-/// \param nSteps         - nsteps to be done for the refernce
-/// \param stepFraction   - step fraction to switch between RK and Euler
+/// @brief Unit test to check performance  - tracks is corrected in nSteps or using RK in one step - the results will be stored in the streamer for later numberical analysis
+/// @param pcstream       - debug streamer output
+/// @param xOverX0        - X0
+/// @param xTimesRho      - is the product length*density (g/cm^2).
+/// @param mass           - particle mass
+/// @param nSteps         - nsteps to be done for the refernce
+/// @param stepFraction   - step fraction to switch between RK and Euler
 void AliExternalTrackParam4D::UnitTestDumpCorrectForMaterial(TTreeSRedirector * pcstream, Double_t xOverX0, Double_t xTimesRho,Double_t mass,Int_t nSteps, Float_t stepFraction) {
   AliExternalTrackParam4D param0 = *this;
   AliExternalTrackParam4D paramRK = *this;
@@ -958,6 +964,9 @@ void AliExternalTrackParam4D::UnitTestDumpCorrectForMaterial(TTreeSRedirector * 
               "\n";
 }
 
+/// @brief Update track 1 with track 2 using Kalman filter formalism
+/// @param track1 
+/// @param track2 
 void AliExternalTrackParam4D::UpdateTrack(AliExternalTrackParam4D &track1, const AliExternalTrackParam4D &track2){
   //
   // Update track 1 with track 2
@@ -1034,6 +1043,10 @@ void AliExternalTrackParam4D::UpdateTrack(AliExternalTrackParam4D &track1, const
   }
 }
 
+/// @brief Adapted code from AliHelix to get helix parameters from AliExternalTrackParam
+/// @param fHelix 
+/// @param t 
+/// @param bz 
 void getHelix(Double_t *fHelix,  AliExternalTrackParam t, float bz){
   // addapted code from AliHelix
   Double_t x,cs,sn;
@@ -1060,13 +1073,13 @@ void getHelix(Double_t *fHelix,  AliExternalTrackParam t, float bz){
 }
 
 
-/// make layer distribution in interval layer0(r0)->layerN(rN) following power low distance
-/// \param layer0
-/// \param layerN
-/// \param r0
-/// \param rN
-/// \param power
-/// \param X0
+/// @brief make layer distribution in interval layer0(r0)->layerN(rN) following power low distance
+/// @param layer0
+/// @param layerN
+/// @param r0
+/// @param rN
+/// @param power
+/// @param X0
 void fastGeometry::setLayerRadiusPower(int layer0, int layerN, float r0, float rN, float power, float X0,float rho, float resol[2]){
     float dLayerN=(layerN-layer0);
     for (Int_t iLayer=layer0; iLayer<=layerN; iLayer++){
@@ -1080,6 +1093,12 @@ void fastGeometry::setLayerRadiusPower(int layer0, int layerN, float r0, float r
     fLayerIndex = Argsort(fLayerRadius);
 }
 
+/// @brief Set properties of a specific layer
+/// @param iLayer Index of the layer
+/// @param radius Radius of the layer
+/// @param X0 Radiation length of the layer
+/// @param rho Density of the layer
+/// @param resol Resolution array [rphi, z]
 void fastGeometry::setLayer(int iLayer, float radius,  float X0,float rho, float resol[2]) {
   fLayerX0[iLayer] = X0;
   fLayerRho[iLayer] = rho;
@@ -1088,7 +1107,7 @@ void fastGeometry::setLayer(int iLayer, float radius,  float X0,float rho, float
   fLayerResolZ[iLayer] = resol[1];
 }
 
-
+/// @brief Refit particle by combining inward and outward tracking results
 void fastParticle::refitParticle()
 {
   fParamRefit = fParamIn;
@@ -1141,13 +1160,13 @@ void fastParticle::refitParticle()
   }
 }
 
-/// simulate particle    - barrel part, end cup and loopers not yet implemented
-/// \param geom          - geometry and B field description
-/// \param r             - initial position
-/// \param p             - initial momenta
-/// \param pdgCode       - PDG code of particle (pion, Kaon,proton,electron,muon)
-/// \param maxLength     - max length to simulate
-/// \param maxPoints     - maximal number of points to simulate
+/// @brief simulate particle    - barrel part, end cup and loopers not yet implemented
+/// @param geom          - geometry and B field description
+/// @param r             - initial position
+/// @param p             - initial momenta
+/// @param pdgCode       - PDG code of particle (pion, Kaon,proton,electron,muon)
+/// @param maxLength     - max length to simulate
+/// @param maxPoints     - maximal number of points to simulate
 /// \return              - modify status of particles = create points along   - TODO status flags to be decides
 int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3], long pdgCode, float maxLength, uint maxPoints){
   fMaxLayer=0;
@@ -1364,139 +1383,11 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
   return 1;
 }
 
-/*
 
-int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3], int pdgCode, float maxLength, int maxPoints){
-  const float kMaxSnp=0.90;
-  double covar[21]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  fPdgCodeMC=pdgCode;
-  TParticlePDG * particle = TDatabasePDG::Instance()->GetParticle(pdgCode);
-  if (particle== nullptr) {
-    ::Error("fastParticle::simulateParticle","Invalid pdgCode %d",pdgCode);
-    return -1;
-  }
-  float sign = particle->Charge()/3.;
-  float mass = particle->Mass();
-  AliExternalTrackParam param(r,p,covar,sign);
-  float length=0, time=0;
-  float radius = sqrt(param.GetX()*param.GetX()+param.GetY()*param.GetY());
-  float direction=r[0]*p[0]+r[1]*p[1]+r[2]*p[2];
-  direction=(direction>0)? 1.:-1.;
-  if (radius==0) direction=1;
-  uint indexR= uint(std::upper_bound (geom.fLayerRadius.begin(),geom.fLayerRadius.end(), radius)-geom.fLayerRadius.begin());
-  int nPoint=0;
-  fParamMC.resize(1);
-  fParamMC[0]=param;
-  fLayerIndex[0]=indexR;
-  double *par = (double*)param.GetParameter();
-  for (nPoint=1; nPoint<maxPoints&&length<maxLength; nPoint++){
-    //printf("%d\n",nPoint);
-    //param.Print();
-    if (indexR>geom.fLayerRadius.size()) {
-      break;
-    }
-    double xyz[3],pxyz[3];
-    float radius  = geom.fLayerRadius[indexR];
-    //float xrho    = geom.fLayerRho[indexR];
-    //float xx0     = geom.fLayerX0[indexR];
-    //Float_t x = param.GetXatLabR(r,localX,fBz,1);
-    int status =  param.GetXYZatR(radius,geom.fBz,xyz);
-    if (status==0){   // if not possible to propagate to next radius - assume looper - change direction
-      float C         = param.GetC(geom.fBz);
-      float R         = TMath::Abs(1/C);
-      float dca       = param.GetD(0,0,geom.fBz);         // distance of closest approach to origin (0,0)
-      float dla       = dca+2*R;                          // distance of longest approach
-      bool  isUp      = abs(Radius-dca)>abs(Radius-dla);
-      float dAlpha    = abs(TMath::ASin(param->GetSnp()))-TMath::Pi()*0.5;
-      dAlpha *=(param->GetSnp()<0):-1.:1.;
-      float alphaNew  = param.GetAlpha()+dAlpha;
-      double paramNew[5]={par[0],par[1],par[2],par[3],par[4]};
-      AliExternalTrackParam paramNew=param;
-      double xyzNew[3],pxyzNew[3];
-      paramNew.GetPxPyPz(pxyzNew);
-      paramNew.GetXYZ(xyzNew);
-      float stepDir=(direction*C*sign)>0? -1:1;
-      double alphaDir  = TMath::ATan2(pxyzNew[1],pxyzNew[0]);
-      if (stepDir<0) alphaDir+=TMath::Pi();
-      double alpha     = TMath::ATan2(xyzNew[1],xyzNew[0]);
-      float dPhi = TMath::Abs(TMath::ASin(paramNew.GetSnp()));
-      float step = TMath::Cos(dPhi)*TMath::Abs(R);
-      status = paramNew.Rotate(alphaDir);
-      if (status==0) {
-        param.Print();
-        paramNew.Print();
-        printf("1.) Can not rotate: \t%f\t%f\t%f\n\n",direction,C,sign);
-        break;
-      }
-
-      float newX=paramNew.GetX()+stepDir*TMath::Abs(step*2);
-      status = paramNew.PropagateTo(newX,geom.fBz);
-      if (status==0) {
-        printf("2.)\n");
-        param.Print();
-        paramNew.Print();
-        AliExternalTrackParam paramNew2=param;
-        status = paramNew2.Rotate(-alphaDir);
-        float newX=paramNew2.GetX()+TMath::Abs(step*2);
-        bool status2 = paramNew2.PropagateTo(newX,geom.fBz);
-        paramNew2.Print();
-        printf("2.) Can not propagate:\t%f\t%f\t%f\t%d\t%d\n\n\n",direction,C,sign, (direction*C*sign)>0,status2, isUp);
-        break;
-      }
-      paramNew.GetXYZ(xyzNew);
-      double alphaNew     = TMath::ATan2(xyzNew[1],xyzNew[0])+TMath::Pi();
-      status = paramNew.Rotate(alphaNew);
-      if (status==0) {
-        printf("\n");
-        param.Print();
-        paramNew.Print();
-        printf("3.) Can not rotate new: \t%f\t%f\t%f\t%d\n\n\n",direction,C,sign, (direction*C*sign)>0);
-        break;
-      }
-      paramNew.SetParamOnly(-paramNew.GetX(),alphaNew-TMath::Pi(),paramNew.GetParameter());
-      double *parNew = (double*)paramNew.GetParameter();
-      parNew[4]*=-1; parNew[3]*=-1;
-      printf("param print begin\n");
-      param.Print();
-      paramNew.Print();
-      status = paramNew.PropagateTo(param.GetX(),geom.fBz);
-      if (status==0) {
-        printf("\n");
-        param.Print();
-        paramNew.Print();
-        printf("4.) Can not propagate: \t%f\t%f\t%f\n\n",direction,C,sign);
-      }
-      paramNew.Print();
-      param=paramNew;
-      direction*=-1;
-      indexR=fLayerIndex[nPoint-1];
-      par = (double*)param.GetParameter();
-    }else{
-      double alpha  = TMath::ATan2(xyz[1],xyz[0]);
-      status = param.Rotate(alpha);
-      status = param.PropagateTo(radius,geom.fBz);
-    }
-    //
-    float xrho    = geom.fLayerRho[indexR];
-    float xx0     = geom.fLayerX0[indexR];
-    float tanPhi2 = par[2]*par[2];
-    tanPhi2=(1-tanPhi2);
-    float crossLength=TMath::Sqrt(1.+tanPhi2+par[3]*par[3]);               /// geometrical path assuming crossing cylinder
-    param.CorrectForMeanMaterial(-crossLength*xx0,-crossLength*xrho,mass);
-    fParamMC.resize(nPoint+1);
-    fParamMC[nPoint]=param;
-    fLayerIndex[nPoint]=indexR;
-    indexR+=direction;
-  }
-  return 1;
-}
-
-*/
-
-///
-/// \param geom          - pointer to geometry to use
-/// \param pdgCode       - pdgCode used in the reconstruction
-/// \param layerStart    - starting layer to do tracking
+/// @brief Reconstruct particle - inward tracking
+/// @param geom          - pointer to geometry to use
+/// @param pdgCode       - pdgCode used in the reconstruction
+/// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint indexStart){
   const Float_t chi2Cut=100;
@@ -1706,10 +1597,10 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 }
 
 
-///
-/// \param geom          - pointer to geometry to use
-/// \param pdgCode       - pdgCode used in the reconstruction
-/// \param layerStart    - starting layer to do tracking
+/// @brief Reconstruct particle - inward tracking including looper handling
+/// @param geom          - pointer to geometry to use
+/// @param pdgCode       - pdgCode used in the reconstruction
+/// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
@@ -2066,10 +1957,10 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 }
 
 
-///
-/// \param geom          - pointer to geometry to use
-/// \param pdgCode       - pdgCode used in the reconstruction
-/// \param layerStart    - starting layer to do tracking
+/// @brief Reconstruct particle - outward tracking including looper handling
+/// @param geom          - pointer to geometry to use
+/// @param pdgCode       - pdgCode used in the reconstruction
+/// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
@@ -2423,10 +2314,10 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
   
 }
 
-///
-/// \param geom          - pointer to geometry to use
-/// \param pdgCode       - pdgCode used in the reconstruction
-/// \param layerStart    - starting layer to do tracking
+/// @brief Reconstruct particle - inward tracking without layer by layer rotation
+/// @param geom          - pointer to geometry to use
+/// @param pdgCode       - pdgCode used in the reconstruction
+/// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
 int fastParticle::reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, uint layerStart){
   const Float_t chi2Cut=16;
@@ -2548,8 +2439,8 @@ int fastParticle::reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, 
   return 1;
 }
 
-///
-/// \param valueType      0 - <pt>,  1 - <1/pt> - 2 -<dEdxExp>, 3 - 1/dEdx, 4 - dEdx/p**2
+/// @brief Get mean value of variable along the track
+/// @param valueType      0 - <pt>,  1 - <1/pt> - 2 -<dEdxExp>, 3 - 1/dEdx, 4 - dEdx/p**2
 /// \return
 Float_t fastParticle::getMean(Int_t valueType,Float_t beginF, Float_t endF, Int_t powerType){
   Float_t valueMean=0;
@@ -2573,9 +2464,11 @@ Float_t fastParticle::getMean(Int_t valueType,Float_t beginF, Float_t endF, Int_
   if (nPoints==0) return 0;
   return  valueMean/nPoints;
 }
-///
-/// \param valueType      0 - LArmMC  1 - LArmIn 2-MC length, 3 - MC legnth for the last point
-/// \param averageType    dummy
+
+
+/// @brief Get statistic value of variable along the track
+/// @param valueType      0 - LArmMC  1 - LArmIn 2-MC length, 3 - MC legnth for the last point
+/// @param averageType    dummy
 /// \return
 Float_t fastParticle::getStat(Int_t valueType){
   Float_t valueMean=0;
@@ -2620,8 +2513,8 @@ Float_t fastParticle::getStat(Int_t valueType){
 
 
 
-/// set derived varaibles as alaiases to tree
-/// \param tree
+/// @brief set derived variables as aliases to tree
+/// @param tree
 void fastParticle::setAliases(TTree & tree){
   tree.SetAlias("gxIn","cos(part.fParamIn[].fAlpha)*part.fParamIn[].fX");
   tree.SetAlias("gyIn","sin(part.fParamIn[].fAlpha)*part.fParamIn[].fX");
