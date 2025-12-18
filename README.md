@@ -75,7 +75,7 @@ gROOT->LoadMacro("MC/fastSimulation.cxx+");
 
 // Run TPC test with 1000 particles
 .L MC/fastSimulationTest.C
-testTPCParameterScan(1000, "data/fastSimulation.root");
+testTPCParameterScan(1000, "data/fastParticle.root");
 ```
 
 #### Python Interface 
@@ -90,7 +90,7 @@ gROOT.LoadMacro("MC/fastSimulation.cxx+")
 gROOT.LoadMacro("MC/fastSimulationTest.C")
 
 # Run simulation
-ROOT.testTPCParameterScan(1000, "data/fastSimulation.root")
+ROOT.testTPCParameterScan(1000, "data/fastParticle.root")
 ```
 
 ## Main Components
@@ -153,9 +153,9 @@ The framework supports simulation of:
 ## Analysis Tools
 
 ### Jupyter Notebooks
-The `notebooks/` directory contains analysis examples:
+The `notebooks/` directory contains analysis examples. All have fairly detailed Markdown cells explaining their purpose. These include:
 - **fastMCKalmanUnits.ipynb**: Unit testing and validation plots
-
+- **fastMCKalmanMomRes.ipynb**: Momentum resolution and bias studies
 
 ## References
 

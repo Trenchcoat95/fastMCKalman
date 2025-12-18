@@ -950,6 +950,43 @@ def Draw2HistosRes(tree,Y1,Y2,X,xrange,yrange,Xname,extracond,cc,lg,lgn,yrangeus
     SetCanvas(cc)
     hpkGAr_sigma.Draw("E1")
     hpkGAr13_sigma.Draw("E1 same")
+    
+def Draw1HistosRes(tree,Y,X,xrange,yrange,Xname,extracond,cc,lg,yrangeuser,whichfit=2,whichvar = 0,paramname = "(a)"):
+
+    # paramname = ""
+    # if(whichfit==2): paramname = "(a)"
+    # else: paramname = "(b)"
+
+    paramsymbol = ""
+    if(whichfit==2): paramsymbol= "#it{#sigma} (1- #it{p}_{reco}/#it{p}_{true})"
+    else: paramsymbol= "#it{#mu} (1- #it{p}_{reco}/#it{p}_{true})"
+
+    if(whichvar==1):
+            if(whichfit==2): paramsymbol= "#it{#sigma} (sin#phi_{reco}-sin#phi_{true})"
+            else: paramsymbol= "#it{#mu} (sin#phi_{reco}-sin#phi_{true}))"
+
+    if(whichvar==2):
+        if(whichfit==2): paramsymbol= "#it{#sigma} (tan#lambda_{reco}-tan#lambda_{true})"
+        else: paramsymbol= "#it{#mu} (tan#lambda_{reco}-tan#lambda_{true}))"
+
+    paramnumber = ""
+    if(whichfit==2): paramnumber = "2"
+    else: paramnumber = "1"
+
+
+    tree.Draw(Y+":"+X+">>hpkGAr("+xrange+","+yrange+")",extracond,"colz")
+    hpkGAr = ROOT.gPad.GetPrimitive("hpkGAr")
+    hpkGAr.FitSlicesY()
+    hpkGAr_sigma = ROOT.gDirectory.Get("hpkGAr_"+paramnumber)
+
+    SetHisto(hpkGAr_sigma,";"+Xname+" ;"+paramsymbol,ROOT.kBlack,20,yrangeuser)
+
+    SetLegend(lg)
+    lg.SetHeader(paramname)
+    lg.AddEntry(hpkGAr_sigma, " data ", "pl")
+
+    SetCanvas(cc)
+    hpkGAr_sigma.Draw("E1")
 
 def Draw2HistosRes2Trees(tree,tree2,Y1,Y2,X,xrange,yrange,Xname,extracond,cc,lg,lgn,yrangeuser,whichfit=2,whichvar = 0,paramname="(a)"):
 

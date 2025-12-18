@@ -520,23 +520,24 @@ void setAliases(TTree & tree){
 void initTreeFast(const char * inputList="fastParticle.list"){
   const char* inputListPath=gSystem->ExpandPathName(inputList);
   treeFast  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"fastPart",0,10000);
-  treeTurn  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"turn",0,10000);
-  treeUnit0  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"UnitTestDumpCorrectForMaterial",0,10000);
   treeSeed  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"seedDump",0,10000);
   treeFast->SetMarkerStyle(21);
-  treeFast->SetMarkerSize(0.5);
-   treeUnit0->SetMarkerStyle(21);
-  treeUnit0->SetMarkerSize(0.5);
-  treeSeed->BuildIndex("gid");
+  treeFast->SetMarkerSize(0.5);  
   treeFast->BuildIndex("gid");
+  treeSeed->BuildIndex("gid");
   treeSeed->AddFriend(treeFast,"F");
   
   gStyle->SetOptTitle(1);
   setAliases(*treeFast);
-  //
-  treeUnit0->SetAlias("dEdxOutIn","AliExternalTrackParam::BetheBlochSolid(0+paramStepRK.P()/mass)/AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass)");
-  treeUnit0->SetAlias("dEdxIn","AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass+0)");
-  treeUnit0->SetAlias("dEdxOut","AliExternalTrackParam::BetheBlochSolid(paramRK.P()/mass+0)");
+  
+  // Additional trees for debugging
+  // treeTurn  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"turn",0,10000);
+  // treeUnit0  = AliXRDPROOFtoolkit::MakeChainRandom(inputListPath,"UnitTestDumpCorrectForMaterial",0,10000);
+  // treeUnit0->SetMarkerStyle(21);
+  // treeUnit0->SetMarkerSize(0.5);
+  // treeUnit0->SetAlias("dEdxOutIn","AliExternalTrackParam::BetheBlochSolid(0+paramStepRK.P()/mass)/AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass)");
+  // treeUnit0->SetAlias("dEdxIn","AliExternalTrackParam::BetheBlochSolid(paramIn.P()/mass+0)");
+  // treeUnit0->SetAlias("dEdxOut","AliExternalTrackParam::BetheBlochSolid(paramRK.P()/mass+0)");
 
 }
 
