@@ -1,6 +1,6 @@
 # some binary files
 *.png
-*root
+*.eps
 *log
 # Compiled Object files
 *.slo
@@ -8,6 +8,8 @@
 *.o
 *.d
 *.pcm
+*.pyc
+*__pycache__
 
 # Compiled Dynamic libraries
 *.so

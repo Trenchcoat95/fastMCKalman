@@ -32,30 +32,28 @@ TChain * treeFast = 0;
 TChain * treeTurn=0;
 TChain * treeUnit0=0;
 TChain * treeSeed=0;
-void testDummy(){
-  double r[]={0,0,0};
-  double p[]={1,0,0};
-  //particle.simulateParticle(geom, r,p,211,200,90);
-}
 
 /// test for looper development with continous tracking - ALICE TPC gas cylinder without ITS - emulation of the gas detectors
 /// \param nParticles
 /// \param dumpStream
-void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool dumpStream=1){
+void testTPCParameterScan(Int_t nParticles, std::string file_name="fastParticle.root", bool dumpStream=1){
 
   const Int_t   nLayerTPC=250;
-  const Int_t   nPoints=nLayerTPC*4;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
-  const Float_t kMinPt=0.02;
-  const Float_t kMax1Pt=1./100.;
-  const Float_t kFlatPtMax=50;
-  const Float_t kFlatPtFraction=0.3;
+  const Int_t   nPoints=nLayerTPC*100;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
+  const Float_t kMinPt=0.01;
+  const Float_t kMax1Pt=1./20.;
+  const Float_t kFlatPtMin=0.01;
+  const Float_t kFlatPtMax=20;
+  const Float_t kFlatPtFraction=0.7;
+  const Float_t kSecondaryFraction = 0.5;
   const Float_t smearR=200;
   const Float_t smearZ=200;
   const Float_t  xx0=7.8350968e-05;
   const Float_t  xrho=0.0016265266;
-  const Float_t kNominalFraction=0.3;     // fraction of nominal properties
+  const Float_t kNominalFraction=0;     // fraction of nominal properties
   const Float_t kMaterialScaling=10;      // material random scaling to
-  const Float_t kMaxResol=0.2;            // point resolution scan max resolution
+  const Float_t kMinMaterialScaling=0.1;      // material random scaling to
+  const Float_t kMaxResol=0.5;            // point resolution scan max resolution
   const Float_t kMinResol=0.01;           //  point resolution scan min resolution
   const Float_t kDefResol=0.1;           //  point resolution scan min resolution
 
@@ -80,8 +78,8 @@ void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool du
     particle.fgStreamer=pcstream;
     particle.gid=i;
     // generate scan detector properties
-    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*kMaterialScaling)+0.0;
-    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: gRandom->Rndm()*kMaxResol;
+    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*(kMaterialScaling-kMinMaterialScaling)+kMinMaterialScaling);
+    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: (gRandom->Rndm()*(kMaxResol-kMinResol)+kMinResol);
     for (size_t iLayer=0; iLayer<geom.fLayerX0.size();iLayer++) {
       geom.fLayerX0[iLayer] = xx0 * matScaling;
       geom.fLayerRho[iLayer] = xrho * matScaling;
@@ -89,15 +87,18 @@ void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool du
       geom.fLayerResolZ[iLayer] = resolScan;
     }
     double r[]     = {0,0,0};
-    Bool_t  isSecondary=gRandom->Rndm()<0.5;
+    Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
     // isSecondary=kFALSE;
     if (isSecondary){
-        r[0]=2*(gRandom->Rndm()-0.5)*smearR;
-        r[1]=2*(gRandom->Rndm()-0.5)*smearR;
+        double rStart = sqrt(gRandom->Rndm())*smearR;
+        double PhiSt = gRandom->Rndm()*2*TMath::Pi();
+        r[0] = rStart*cos(PhiSt);
+        r[1] = rStart*sin(PhiSt);
         r[2]=2*(gRandom->Rndm()-0.5)*smearZ;
+        int t = 0;
     }
     double pt      = kMinPt/(kMax1Pt*kMinPt+gRandom->Rndm());
-    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*kFlatPtMax;
+    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*(kFlatPtMax-kFlatPtMin)+kFlatPtMin;
     double phi     = gRandom->Rndm()*TMath::TwoPi();
     double theta = (gRandom->Rndm()-0.5)*3;
     double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
@@ -112,11 +113,179 @@ void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool du
     Float_t decayLength= hasDecay ?gRandom->Rndm()*geom.fLayerRadius[geom.fLayerRadius.size()-1]:0;
     particle.fDecayLength=decayLength;
     particle.simulateParticle(geom, r,p,pdgCode,nPoints,nPoints);
-    particle.reconstructParticle(geom,pdgCode,nPoints);
-    fastParticle particle0 = particle;
     particle.reconstructParticleFull(geom,pdgCode,nPoints);
     particle.reconstructParticleFullOut(geom,pdgCode,nPoints);
     particle.refitParticle();
+    float Length = 0;
+    bool jump = 0;
+    double xyz_saved[3];
+    for(size_t p = 1; p<particle.fParamIn.size();p++){
+      double xyz_now[3];
+      double xyz_next[3];
+      particle.fParamMC[p-1].GetXYZ(xyz_now);
+      particle.fParamMC[p].GetXYZ(xyz_next);
+      if(xyz_next[0]==0 || xyz_next[1] == 0 || xyz_next[2]==0){
+        if(!jump) for(size_t k = 0;k<3;k++) xyz_saved[k] = xyz_now[k];
+        jump = 1;
+      }
+      else{
+        if(jump){
+          Length+=sqrt((xyz_next[0]-xyz_saved[0])*(xyz_next[0]-xyz_saved[0])+
+                      (xyz_next[1]-xyz_saved[1])*(xyz_next[1]-xyz_saved[1])+
+                      (xyz_next[2]-xyz_saved[2])*(xyz_next[2]-xyz_saved[2]));
+          jump = 0;
+          for(size_t k = 0;k<3;k++) xyz_saved[k] = 0;
+        }else{
+          Length+=sqrt((xyz_next[0]-xyz_now[0])*(xyz_next[0]-xyz_now[0])+
+                      (xyz_next[1]-xyz_now[1])*(xyz_next[1]-xyz_now[1])+
+                      (xyz_next[2]-xyz_now[2])*(xyz_next[2]-xyz_now[2]));
+        }
+      }
+    }
+    if (dumpStream==kFALSE) continue;
+    if (tree) tree->Fill();
+    else {
+      (*pcstream) << "fastPart" <<
+                  "i=" << i <<
+                  "densScaling="<<matScaling<<
+                  "geom.="<<&geom<<
+                  "hasDecay="<<hasDecay<<
+                  "isSecondary="<<isSecondary<<
+                  "pidCode="<<pidCode<<
+                  "pdgCode="<<pdgCode<<
+                  "charge="<<charge<<
+                  "phi="<<phi<<
+                  "r0=" << r[0] <<
+                  "r1=" << r[1] <<
+                  "r2=" << r[2] <<
+                  "theta="<<theta<<
+                  "Length="<<Length<<
+                  "part.=" << &particle <<
+                  "\n";
+      tree=  ((*pcstream) << "fastPart").GetTree();
+    }
+  }
+  delete pcstream;
+  timer.Print();
+}
+
+
+/// test for looper development with continous tracking - ALICE TPC gas cylinder at high pressurewithout ITS - emulation of the gas detectors
+/// \param nParticles
+/// \param dumpStream
+void testHPgTPC(Int_t nParticles, std::string file_name="fastParticleHPhTPC.root", bool dumpStream=1){
+
+  const Int_t   nLayerTPC=250;
+  const Int_t   nPoints=nLayerTPC*100;     ///maximum number of points a track can have, different from nLayerTPC for Loopers/Secondaries
+  const Float_t kMinPt=0.01;
+  const Float_t kMax1Pt=1./20.;
+  const Float_t kFlatPtMin=0.01;
+  const Float_t kFlatPtMax=5;
+  const Float_t kFlatPtFraction=1;
+  const Float_t kSecondaryFraction = 1;
+  const Float_t smearR=200;
+  const Float_t smearZ=200;
+  const Float_t xx0=8.37758e-04; //1/X0 cm^-1 for ArCH4 at 10 atm
+  const Float_t xrho=0.016770000; //rho g/cm^3 for ArCH4 at 10 atm
+  const Float_t kNominalFraction=0;     // fraction of nominal properties
+  const Float_t kMaterialScaling=1;      // material random scaling to
+  const Float_t kMinMaterialScaling=1;      // material random scaling to
+  const Float_t kMaxResol=0.1;            // point resolution scan max resolution
+  const Float_t kMinResol=0.1;           //  point resolution scan min resolution
+  const Float_t kDefResol=0.3;           //  point resolution scan min resolution
+
+  TStopwatch timer;
+  timer.Start();
+  fastGeometry geom(nLayerTPC+1);
+  geom.fBz=5;
+
+
+  float resol[2]={0.001,0.001};
+  resol[0]=0.1;
+  resol[1]=0.1;
+  geom.setLayerRadiusPower(0,nLayerTPC,1,nLayerTPC,1.0,xx0,xrho,resol);
+
+  TTreeSRedirector *pcstream = new TTreeSRedirector(file_name.c_str(),"recreate");
+  TTree * tree = 0;
+  for (Int_t i=0; i<nParticles; i++){
+    fastParticle particle(nLayerTPC+1);
+    particle.fAddMSsmearing=true;
+    particle.fAddPadsmearing=true;
+    particle.fUseMCInfo=true;
+    particle.fgStreamer=pcstream;
+    particle.gid=i;
+    // generate scan detector properties
+    Float_t matScaling  =(gRandom->Rndm()<kNominalFraction) ? 1:  (gRandom->Rndm()*(kMaterialScaling-kMinMaterialScaling)+kMinMaterialScaling);
+    Float_t resolScan=(gRandom->Rndm()<kNominalFraction) ? kDefResol: (gRandom->Rndm()*(kMaxResol-kMinResol)+kMinResol);
+    for (size_t iLayer=0; iLayer<geom.fLayerX0.size();iLayer++) {
+      geom.fLayerX0[iLayer] = xx0 * matScaling;
+      geom.fLayerRho[iLayer] = xrho * matScaling;
+      geom.fLayerResolRPhi[iLayer] = resolScan;
+      geom.fLayerResolZ[iLayer] = resolScan;
+    }
+    double r[]     = {0,0,0};
+    Bool_t  isSecondary=gRandom->Rndm()<kSecondaryFraction;
+    // isSecondary=kFALSE;
+    if (isSecondary){
+        double rStart = sqrt(gRandom->Rndm())*smearR;
+        double PhiSt = gRandom->Rndm()*2*TMath::Pi();
+        r[0] = rStart*cos(PhiSt);
+        r[1] = rStart*sin(PhiSt);
+        // r[0]=2*(gRandom->Rndm()-0.5)*smearR;
+        // r[1]=2*(gRandom->Rndm()-0.5)*smearR;
+        r[2]=2*(gRandom->Rndm()-0.5)*smearZ;
+        int t = 0;
+    }
+    double pt      = kMinPt/(kMax1Pt*kMinPt+gRandom->Rndm());
+    if (gRandom->Rndm()<kFlatPtFraction) pt= gRandom->Rndm()*(kFlatPtMax-kFlatPtMin)+kFlatPtMin;
+    double phi     = gRandom->Rndm()*TMath::TwoPi();
+    if((phi-TMath::Pi())<0.01 || (phi-TMath::TwoPi())<0.01 || (phi)<0.01) phi+= (0.02*gRandom->Rndm());
+    double theta = (gRandom->Rndm()-0.5)*3;
+    double p[]={pt*sin(phi),pt*cos(phi),pt*theta};
+    float pidFrac = gRandom->Rndm()*3;
+    int    pidCode=0;          //avoid unrecognized pdg codes
+    if(pidFrac<1) pidCode = 1;
+    else if (pidFrac<2 && pidFrac>=1) pidCode=2;
+    else if (pidFrac>=2) pidCode=4;
+    short  charge  = (gRandom->Rndm()<0.5) ? -1:1;
+    int64_t   pdgCode = AliPID::ParticleCode(pidCode);
+    if(pidCode==2) pdgCode*=charge;
+    if (gRandom->Rndm()<kRandomPDGFraction) {
+      pdgCode=0;
+      pidCode=-1;
+    }
+    Bool_t  hasDecay=(gRandom->Rndm()<kDecayFraction);
+    Float_t decayLength= hasDecay ?gRandom->Rndm()*geom.fLayerRadius[geom.fLayerRadius.size()-1]:0;
+    particle.fDecayLength=decayLength;
+    particle.reconstructParticleFull(geom,pdgCode,nPoints);
+    particle.reconstructParticleFullOut(geom,pdgCode,nPoints);
+    particle.refitParticle();
+    float Length = 0;
+    bool jump = 0;
+    double xyz_saved[3];
+    for(size_t p = 1; p<particle.fParamIn.size();p++){
+      double xyz_now[3];
+      double xyz_next[3];
+      particle.fParamMC[p-1].GetXYZ(xyz_now);
+      particle.fParamMC[p].GetXYZ(xyz_next);
+      if(xyz_next[0]==0 || xyz_next[1] == 0 || xyz_next[2]==0){
+        if(!jump) for(size_t k = 0;k<3;k++) xyz_saved[k] = xyz_now[k];
+        jump = 1;
+      }
+      else{
+        if(jump){
+          Length+=sqrt((xyz_next[0]-xyz_saved[0])*(xyz_next[0]-xyz_saved[0])+
+                      (xyz_next[1]-xyz_saved[1])*(xyz_next[1]-xyz_saved[1])+
+                      (xyz_next[2]-xyz_saved[2])*(xyz_next[2]-xyz_saved[2]));
+          jump = 0;
+          for(size_t k = 0;k<3;k++) xyz_saved[k] = 0;
+        }else{
+          Length+=sqrt((xyz_next[0]-xyz_now[0])*(xyz_next[0]-xyz_now[0])+
+                      (xyz_next[1]-xyz_now[1])*(xyz_next[1]-xyz_now[1])+
+                      (xyz_next[2]-xyz_now[2])*(xyz_next[2]-xyz_now[2]));
+        }
+      }
+    }
     //particle.reconstructParticleRotate0(geom,pdgCode,nPoints);
     //particle.simulateParticle(geom, r,p,211, 250,161);
     //particle.reconstructParticle(geom,211,160);
@@ -132,8 +301,13 @@ void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool du
                   "pidCode="<<pidCode<<
                   "pdgCode="<<pdgCode<<
                   "charge="<<charge<<
-                  "part.=" << &particle0 <<
-                  "partFull.=" << &particle <<
+                  "phi="<<phi<<
+                  "theta="<<theta<<
+                  "Length="<<Length<<
+                  "r0=" << r[0] <<
+                  "r1=" << r[1] <<
+                  "r2=" << r[2] <<
+                  "part.=" << &particle <<
                   "\n";
       tree=  ((*pcstream) << "fastPart").GetTree();
     }
@@ -145,7 +319,7 @@ void testTPC(Int_t nParticles, std::string file_name="fastParticle.root",bool du
 /// testAlice configuration ITS+TPC with material budget as in the Run1/2
 /// \param nParticles
 /// \param dumpStream
-void testAlice(Int_t nParticles, std::string file_name="fastParticleALICE.root", bool dumpStream){
+void testAlice(Int_t nParticles, std::string file_name="fastParticleALICE.root", bool dumpStream = 1){
   const Float_t smearR=10;
   const Float_t smearZ=10;
   const Float_t resolY=0.1;
@@ -230,7 +404,7 @@ void testAlice(Int_t nParticles, std::string file_name="fastParticleALICE.root",
 /// testAlice 3 configuration as proposed in https://github.com/preghenella/DelphesO2/blob/a058f94f6cb887edcf725fd991d16ca5f7b76e0b/src/lutWrite.werner.cc
 /// \param nParticles
 /// \param dumpStream
-void testAlice3Werner(Int_t nParticles, std::string file_name="fastParticleALICE3.root", bool dumpStream){
+void testAlice3Werner(Int_t nParticles, std::string file_name="fastParticleALICE3.root", bool dumpStream = 1){
   // simulation setup parameters
   const Float_t smearR=10;
   const Float_t smearZ=10;

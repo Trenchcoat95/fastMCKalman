@@ -35,18 +35,18 @@ public:
   Bool_t GetXYZatR(Double_t xr,Double_t bz, Double_t *xyz=0, Double_t* alpSect=0) const;
   //
   Bool_t CorrectForMeanMaterial(Double_t xOverX0, Double_t xTimesRho,Double_t mass,Float_t stepFraction=0.01, int mcSwitch=0,
-	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochSolid );
+	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochGas );
   Bool_t CorrectForMeanMaterialRK(Double_t xOverX0, Double_t xTimesRho,Double_t mass,Float_t stepFraction=0.01,
-	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochSolid );
+	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochGas );
   Bool_t CorrectForMeanMaterialRKv2(Double_t xOverX0, Double_t xTimesRho,Double_t mass, Float_t stepFraction=0.01,
-	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
-   Bool_t CorrectForMeanMaterialT4(Double_t xOverX0, Double_t xTimesRho,Double_t mass, Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
+	  Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochGas );
+   Bool_t CorrectForMeanMaterialT4(Double_t xOverX0, Double_t xTimesRho,Double_t mass, Double_t (*f)(Double_t)=AliExternalTrackParam::BetheBlochGas );
   // dPdx function
-  static Double_t dPdx(Double_t p, Double_t mass, Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
-  static Double_t dPdxEuler(Double_t p, Double_t mass, Double_t xTimesRho, Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
-  static Double_t dPdxEulerStep(Double_t p, Double_t mass, Double_t xTimesRho, Double_t step,  Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
-  static Double_t dPdxCorrT4(Double_t p, Double_t mass, Double_t xTimesRho,Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
-  static Double_t dPdxCorrT42(Double_t p, Double_t mass, Double_t xTimesRho,Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochSolid);
+  static Double_t dPdx(Double_t p, Double_t mass, Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochGas);
+  static Double_t dPdxEuler(Double_t p, Double_t mass, Double_t xTimesRho, Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochGas);
+  static Double_t dPdxEulerStep(Double_t p, Double_t mass, Double_t xTimesRho, Double_t step,  Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochGas);
+  static Double_t dPdxCorrT4(Double_t p, Double_t mass, Double_t xTimesRho,Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochGas);
+  static Double_t dPdxCorrT42(Double_t p, Double_t mass, Double_t xTimesRho,Double_t (*fundEdx)(Double_t)=AliExternalTrackParam::BetheBlochGas);
   void UnitTestDumpCorrectForMaterial(TTreeSRedirector * pcstream, Double_t xOverX0, Double_t xTimesRho,Double_t mass, Int_t nSteps, Float_t stepFraction=0.02);
   static void UpdateTrack(AliExternalTrackParam4D &track1, const AliExternalTrackParam4D &track2);
 public:
@@ -115,11 +115,11 @@ public:
   Float_t GetZ(Int_t pidCode);
   Float_t getMean(Int_t valueType,  Float_t beginF=0, Float_t endF=1, Int_t powerType=0);
   Float_t getStat(Int_t valueType);
-  int simulateParticle(fastGeometry     &geom, double r[3], double p[3], long pdgCode, float maxLength, uint maxPoints);
-  int reconstructParticle(fastGeometry  &geom, long pdgCode, uint layerStart);
-  int reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint layerStart);
-  int reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint indexStart);
-  int reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, uint layerStart);
+  int simulateParticle(fastGeometry     &geom, double r[3], double p[3], long pdgCode, float maxLength, uint maxPoints, bool write_turn_tree = false, bool write_material_correction_tree = false);
+  int reconstructParticle(fastGeometry  &geom, long pdgCode, uint layerStart, bool write_material_correction_tree = false);
+  int reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint layerStart, bool write_material_correction_tree = false);
+  int reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint indexStart, bool write_material_correction_tree = false);
+  int reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, uint layerStart, bool write_material_correction_tree = false);
   void refitParticle();
   static void setAliases(TTree & tree);           //   set aliases for derived variables
   int                        fAddMSsmearing;     //   flag to add smearing during simulation

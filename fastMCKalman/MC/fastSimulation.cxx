@@ -138,8 +138,8 @@ Double_t AliExternalTrackParam4D::PropagateToMirrorX(Double_t b, Float_t dir, Do
   Double_t dPhic = 2*asin(sinphic);
   Double_t darchxy = dir*abs(dPhic*rc);
   fP1 += darchxy*fP[3];
-  fC00+=(sy*darchxy)*(sy*darchxy);
-  fC11+=(sz*darchxy)*(sz*darchxy);
+  // fC00+=(sy*darchxy)*(sy*darchxy);
+  // fC11+=(sz*darchxy)*(sz*darchxy);
 
 
   //Flip parameters 2/4
@@ -517,7 +517,7 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
     cP4 = pOld/pOut;                               /// TODO we use momentum loss not need to use "Ruben E loss approximation"
     //if (TMath::Abs(fP4*cP4)>100.) return kFALSE; //Do not track below 10 MeV/c -disable controlled by the BG cut
     // Approximate energy loss fluctuation (M.Ivanov)
-    const Double_t knst=0.07; // TODO To be tuned.
+    const Double_t knst=0.00031622777; // TODO To be tuned.
     //Double_t sigmadE=knst*TMath::Abs(dE);                 /// TODO remove that part if momentm smearing working well
     //cC44 += ((sigmadE*Ein/p2*fP4)*(sigmadE*Ein/p2*fP4));
     //
@@ -545,7 +545,7 @@ Bool_t AliExternalTrackParam4D::CorrectForMeanMaterial(Double_t xOverX0, Double_
       if (!isMC) return kFALSE;
     }
     Double_t cP4MS = sqrt((1+(p3New*p3New))/(1+(fP[3])*(fP[3]))); ////keep total momentum constant and modify q/pt accordingly (this factor is cos(lambda)/cos(lambda_new))
-    double p4RelSmear=gRandom->Gaus(0,sigmadPRel);
+    double p4RelSmear=gRandom->Landau(0,sigmadPRel);
     fP[2]=p2New;
     fP[3]=p3New;
     fP[4]*=cP4MS;
@@ -1168,11 +1168,11 @@ void fastParticle::refitParticle()
 /// @param maxLength     - max length to simulate
 /// @param maxPoints     - maximal number of points to simulate
 /// \return              - modify status of particles = create points along   - TODO status flags to be decides
-int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3], long pdgCode, float maxLength, uint maxPoints){
+int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3], long pdgCode, float maxLength, uint maxPoints, bool write_turn_tree, bool write_material_correction_tree){
   fMaxLayer=0;
   const float kMaxSnp=0.90;
   const float kMaxLoss=0.5;
-  const float kMaxZ=300;
+  const float kMaxZ=250;
    double covar[21]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
    float_t mass=0,sign=1;
   fPdgCodeMC=pdgCode;
@@ -1273,7 +1273,7 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
         break;
       }
 
-      if (fgStreamer){
+      if (fgStreamer && write_turn_tree) {
         (*fgStreamer)<<"turn"<<
           "radius="<<radius<<     // radius to propagate
           "direction="<<direction<<
@@ -1332,7 +1332,7 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
     //status = param.CorrectForMeanMaterialT4(crossLength*xx0,-crossLength*xrho,mass);
     double pOld=param.GetP();
     status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,1+0x2*fAddMSsmearing);
-    if (1){
+    if (write_material_correction_tree){
        if (fgStreamer) {
          float dPdx=param.dPdxEulerStep(pOld,mass,  -crossLength*xrho,0.005);
          //float dEdx=param.dPdxEulerStep(pOld,mass,  crossLength*xx0,-crossLength*xrho);
@@ -1354,7 +1354,7 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
     if (status==false){
       status = param.CorrectForMeanMaterial(crossLength*xx0,-crossLength*xrho,mass,0.005,fAddMSsmearing);
     }
-    if (gRandom->Rndm()<fracUnitTest) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
+    if (gRandom->Rndm()<fracUnitTest && write_material_correction_tree) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
     if (status) {
         fStatusMaskMC[nPoint]|=kTrackCorrectForMaterial;
       }else{
@@ -1389,7 +1389,7 @@ int fastParticle::simulateParticle(fastGeometry  &geom, double r[3], double p[3]
 /// @param pdgCode       - pdgCode used in the reconstruction
 /// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
-int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint indexStart){
+int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint indexStart, bool write_material_correction_tree){
   const Float_t chi2Cut=100;
   const float kMaxSnp=0.95;
   const float kMaxLoss=0.3;
@@ -1602,7 +1602,7 @@ int fastParticle::reconstructParticle(fastGeometry  &geom, long pdgCode, uint in
 /// @param pdgCode       - pdgCode used in the reconstruction
 /// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
-int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart){
+int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uint indexStart, bool write_material_correction_tree){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
   const float kMaxSnp=0.95;
   const float kMaxLoss=0.3;
@@ -1934,7 +1934,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
           status*= param.CorrectForMeanMaterial(crossLength * xx0/5., crossLength * xrho/5., mass, 0.01);
         }
         //status = param.CorrectForMeanMaterialT4(crossLength*xx0,crossLength*xrho,mass);
-        if (gRandom->Rndm() <fracUnitTest) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,crossLength*xrho,mass,20);
+        if (gRandom->Rndm() <fracUnitTest && write_material_correction_tree) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,crossLength*xrho,mass,20);
         if (status) {
           fStatusMaskIn[index]|=kTrackCorrectForMaterial;
         }else{
@@ -1962,7 +1962,7 @@ int fastParticle::reconstructParticleFull(fastGeometry  &geom, long pdgCode, uin
 /// @param pdgCode       - pdgCode used in the reconstruction
 /// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
-int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint){
+int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, uint lastPoint, bool write_material_correction_tree){
   const Float_t chi2Cut=100/(geom.fLayerResolZ[0]);
   const float kMaxSnp=0.95;
   const float kMaxLoss=0.3;
@@ -2292,7 +2292,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
           status*= param.CorrectForMeanMaterial(crossLength * xx0/5., -crossLength * xrho/5., mass, 0.01);
         }
         //status = param.CorrectForMeanMaterialT4(crossLength*xx0,crossLength*xrho,mass);
-        if (gRandom->Rndm() <fracUnitTest) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
+        if (gRandom->Rndm() <fracUnitTest && write_material_correction_tree) param.UnitTestDumpCorrectForMaterial(fgStreamer,crossLength*xx0,-crossLength*xrho,mass,20);
         if (status) {
           fStatusMaskOut[index]|=kTrackCorrectForMaterial;
         }else{
@@ -2319,7 +2319,7 @@ int fastParticle::reconstructParticleFullOut(fastGeometry  &geom, long pdgCode, 
 /// @param pdgCode       - pdgCode used in the reconstruction
 /// @param layerStart    - starting layer to do tracking
 /// \return   -  TODO  status flags to be decides
-int fastParticle::reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, uint layerStart){
+int fastParticle::reconstructParticleRotate0(fastGeometry  &geom, long pdgCode, uint layerStart, bool write_material_correction_tree){
   const Float_t chi2Cut=16;
   const float kMaxSnp=0.95;
   const float kMaxLoss=0.3;

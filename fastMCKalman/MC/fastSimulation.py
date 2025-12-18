@@ -1,13 +1,9 @@
-#from ROOT import gROOT, AliDrawStyle, gStyle
 import ROOT
 from ROOT import gROOT, gStyle,gSystem
 
-gSystem.Load("$fastMCKalman/fastMCKalman/aliKalman/test/AliExternalTrackParam.so");
-gROOT.LoadMacro("$fastMCKalman/fastMCKalman/MC//fastSimulation.cxx+")
-gROOT.LoadMacro("$fastMCKalman/fastMCKalman/MC/fastSimulationTest.C")
-#AliDrawStyle.SetDefaults()
-#AliDrawStyle.ApplyStyle("figTemplate")
-#gStyle.SetOptTitle(1)
+gSystem.Load("../aliKalman/AliExternalTrackParam.so")
+gROOT.LoadMacro("../MC/fastSimulation.cxx+")
+gROOT.LoadMacro("../MC/fastSimulationTest.C")
 
 
 def setAliasesFast(tree):
@@ -20,4 +16,3 @@ def setAliasesFast(tree):
     tree.SetAlias("ptIn","part.fParamIn[1].fData.Pt()")
     tree.SetAlias("tglMC","part.fParamMC[0].fData.Tgl()")
     tree.SetAlias("tglIn","part.fParamIn[1].fData.Tgl()")
-    #tree.SetAlias
