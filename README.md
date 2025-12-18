@@ -43,7 +43,7 @@ library tests
 
 1. **Build the AliKalman library**: Starting from the `fastMCKalman/` directory
    ```bash
-   cd fastMCKalman/aliKalman/
+   cd aliKalman/
    make clean
    make
    ```
@@ -128,8 +128,8 @@ Particle simulation class handling:
 Located in `fastMCKalman/MC/`:
 
 - **fastSimulationTest.C**: Comprehensive simulation tests with various scenarios. Available functions:
-  - `testTPCParameterScan()`: Produces a parameter scan sample whih include various primary/secondary particles with different PDGs, different geometrical environments etc. (see the parameter scan sample in the paper linked above)
-  - `testHPgTPC()`: Produces a sample of TPC tracks in a high pressure environment (See also the high pressure TPC study in the paper linked above)
+  - `testTPCParameterScan()`: Produces a parameter scan sample which includes various primary/secondary particles with different PDGs, different geometrical environments etc. (see the parameter scan sample in the paper linked above)
+  - `testHPgTPC()`: Produces a sample of TPC tracks in a high pressure environment (see the high pressure TPC study in the paper linked above)
   - `testALICE()`: Produces a sample of only primary particles in the ALICE TPC geometry for validation purposes. This includes an approximation of the ITS, which is however far from being complete. Use at your own risk.
   - `testALICE3()`: Produces a sample of only primary particles in the ALICE3 TPC geometry for validation purposes. This includes an approximation of the new ITS, which is however far from being complete. Use at your own risk.
 
@@ -156,21 +156,13 @@ The framework supports simulation of:
 The `notebooks/` directory contains analysis examples. All have fairly detailed Markdown cells explaining their purpose. These include:
 - **fastMCKalmanUnits.ipynb**: Unit testing and validation plots
 - **fastMCKalmanMomRes.ipynb**: Momentum resolution and bias studies
+- **fastMCKalmanSampleProperties.ipynb**: Sample property distributions (momentum, length, number of hits, etc.)
 
 ## References
 
 This code is based on the ALICE TPC tracking framework:
 - AliRoot: ALICE Offline Framework
 - Original authors: I.Belikov (CERN), M.Ivanov (GSI/CERN)
-
-## Demo Branch Purpose
-
-The **Demo_2025** branch specifically demonstrates:
-1. Fast simulation capabilities for TPC detector development
-2. Kalman filter implementation and validation
-3. Material effects and their corrections
-4. Track seeding and fitting algorithms
-5. Unit testing framework for tracking code validation
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
