@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `fastMCKalman` package provides a fast Monte Carlo simulation framework for Time Projection Chamber (TPC) tracking using Kalman filter techniques. This demo branch showcases the implementation of particle tracking algorithms adapted from the ALICE experiment, designed for testing and development of TPC-based detector systems. This algorithm ncludes a novel looper following method described in this paper: https://www.sciencedirect.com/science/article/pii/S0010465524003667 
+The `fastMCKalman` package provides a fast Monte Carlo simulation framework for Time Projection Chamber (TPC) tracking using Kalman filter techniques. This demo branch showcases the implementation of particle tracking algorithms adapted from the ALICE experiment, designed for testing and development of TPC-based detector systems. This algorithm includes a novel looper following method described in this paper: https://www.sciencedirect.com/science/article/pii/S0010465524003667 
 
 ## Key Features
 
